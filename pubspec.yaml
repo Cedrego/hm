@@ -36,6 +36,7 @@ dependencies:
   cupertino_icons: ^1.0.8
   cached_network_image: ^3.4.1
   flutter_svg: ^2.2.1
+  flutter_launcher_icons: ^0.14.4
 
 dev_dependencies:
   flutter_test:
@@ -53,6 +54,8 @@ dev_dependencies:
 
 # The following section is specific to Flutter packages.
 flutter:
+  assets:
+    - assets/iconos/
 
   # The following line ensures that the Material Icons font is
   # included with your application, so that you can use the icons in
@@ -89,3 +92,8 @@ flutter:
   #
   # For details regarding fonts from package dependencies,
   # see https://flutter.dev/to/font-from-package
+
+flutter_launcher_icons:
+  android: "launcher_icon"
+  ios: "launcher_icon"
+  image_path: "assets/iconos/HostelMochileros.png"
