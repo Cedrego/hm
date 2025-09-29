@@ -5,7 +5,7 @@ import '../login_screen/login_screen.dart';
 import '../registration_screen/registration_screen.dart';
 
 class AppNavigationScreen extends StatelessWidget {
-  const AppNavigationScreen({Key? key}) : super(key: key);
+  const AppNavigationScreen({super.key});
 
   @override
   Widget build(BuildContext context) {

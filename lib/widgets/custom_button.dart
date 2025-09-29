@@ -2,26 +2,24 @@ import 'package:flutter/material.dart';
 
 import '../core/app_export.dart';
 
-/**
- * CustomButton - A reusable button component with consistent styling
- * 
- * A customizable button widget that supports both auto-width and full-width layouts
- * with consistent Material Design styling including background color, text styling,
- * border radius, and padding.
- * 
- * @param text - The text to display on the button
- * @param onPressed - Callback function called when button is pressed
- * @param isFullWidth - Whether button should take full available width
- * @param margin - Optional margin around the button
- */
+/// CustomButton - A reusable button component with consistent styling
+/// 
+/// A customizable button widget that supports both auto-width and full-width layouts
+/// with consistent Material Design styling including background color, text styling,
+/// border radius, and padding.
+/// 
+/// @param text - The text to display on the button
+/// @param onPressed - Callback function called when button is pressed
+/// @param isFullWidth - Whether button should take full available width
+/// @param margin - Optional margin around the button
 class CustomButton extends StatelessWidget {
-  CustomButton({
-    Key? key,
+  const CustomButton({
+    super.key,
     required this.text,
     required this.onPressed,
     this.isFullWidth,
     this.margin,
-  }) : super(key: key);
+  });
 
   /// The text to display on the button
   final String text;

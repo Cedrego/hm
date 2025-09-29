@@ -46,11 +46,11 @@ class CustomFormField {
 }
 
 class RegisterFormContainer extends StatelessWidget {
-  RegisterFormContainer({
-    Key? key,
+  const RegisterFormContainer({
+    super.key,
     required this.title,
     required this.fields,
-  }) : super(key: key);
+  });
 
   final String title;
   final List<CustomFormField> fields;

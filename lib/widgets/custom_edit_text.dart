@@ -2,31 +2,29 @@ import 'package:flutter/material.dart';
 
 import '../core/app_export.dart';
 
-/**
- * CustomEditText - A reusable text input field component with consistent styling
- * 
- * Features:
- * - Customizable placeholder text
- * - Multiple keyboard input types (email, text, phone, etc.)
- * - Validation support
- * - Consistent border and background styling
- * - Responsive design using SizeUtils
- * - Configurable margins and focus handling
- * 
- * @param controller - TextEditingController for managing text input
- * @param hintText - Placeholder text shown when field is empty
- * @param keyboardType - Type of keyboard to display (email, text, phone, etc.)
- * @param validator - Function to validate input text
- * @param margin - External spacing around the text field
- * @param focusNode - FocusNode for managing focus state
- * @param obscureText - Whether to hide text input (for passwords)
- * @param enabled - Whether the field is enabled for input
- * @param onChanged - Callback when text changes
- * @param onTap - Callback when field is tapped
- */
+/// CustomEditText - A reusable text input field component with consistent styling
+/// 
+/// Features:
+/// - Customizable placeholder text
+/// - Multiple keyboard input types (email, text, phone, etc.)
+/// - Validation support
+/// - Consistent border and background styling
+/// - Responsive design using SizeUtils
+/// - Configurable margins and focus handling
+/// 
+/// @param controller - TextEditingController for managing text input
+/// @param hintText - Placeholder text shown when field is empty
+/// @param keyboardType - Type of keyboard to display (email, text, phone, etc.)
+/// @param validator - Function to validate input text
+/// @param margin - External spacing around the text field
+/// @param focusNode - FocusNode for managing focus state
+/// @param obscureText - Whether to hide text input (for passwords)
+/// @param enabled - Whether the field is enabled for input
+/// @param onChanged - Callback when text changes
+/// @param onTap - Callback when field is tapped
 class CustomEditText extends StatelessWidget {
-  CustomEditText({
-    Key? key,
+  const CustomEditText({
+    super.key,
     this.controller,
     this.hintText,
     this.keyboardType,
@@ -37,7 +35,7 @@ class CustomEditText extends StatelessWidget {
     this.enabled,
     this.onChanged,
     this.onTap,
-  }) : super(key: key);
+  });
 
   /// Controller for managing the text input
   final TextEditingController? controller;

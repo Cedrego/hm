@@ -4,14 +4,12 @@ import '../core/app_export.dart';
 import './custom_button.dart';
 import './custom_edit_text.dart';
 
-/**
- * CustomFormContainer - A reusable form container component that supports both login and registration forms
- * with consistent styling, validation support, and flexible field configuration. Provides scrollable content
- * with Material Design styling including bordered container, proper spacing, and responsive button layouts.
- */
+/// CustomFormContainer - A reusable form container component that supports both login and registration forms
+/// with consistent styling, validation support, and flexible field configuration. Provides scrollable content
+/// with Material Design styling including bordered container, proper spacing, and responsive button layouts.
 class CustomFormContainer extends StatelessWidget {
-  CustomFormContainer({
-    Key? key,
+  const CustomFormContainer({
+    super.key,
     required this.title,
     required this.fields,
     required this.primaryButtonText,
@@ -20,7 +18,7 @@ class CustomFormContainer extends StatelessWidget {
     this.onSecondaryPressed,
     this.descriptiveText,
     this.isFullWidthButtons,
-  }) : super(key: key);
+  });
 
   /// Title text displayed at the top of the form
   final String title;
