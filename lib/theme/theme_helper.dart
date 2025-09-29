@@ -51,19 +51,19 @@ class ColorSchemes {
 
 class LightCodeColors {
   // App Colors
-  Color get cyan_600 => Color(0xFF019DB9);
-  Color get gray_900 => Color(0xFF1E1E1E);
-  Color get gray_400 => Color(0xFFB3B3B3);
-  Color get blue_gray_100 => Color(0xFFD9D9D9);
-  Color get white_A700 => Color(0xFFFFFFFF);
-  Color get gray_100 => Color(0xFFF5F5F5);
-  Color get blue_gray_900 => Color(0xFF2C2C2C);
+  Color get cyan600 => const Color(0xFF019DB9);
+  Color get gray900 => const Color(0xFF1E1E1E);
+  Color get gray400 => const Color(0xFFB3B3B3);
+  Color get blueGray100 => const Color(0xFFD9D9D9);
+  Color get whiteA700 => const Color(0xFFFFFFFF);
+  Color get gray100 => const Color(0xFFF5F5F5);
+  Color get blueGray900 => const Color(0xFF2C2C2C);
 
   // Additional Colors
   Color get transparentCustom => Colors.transparent;
   Color get redCustom => Colors.red;
   Color get greyCustom => Colors.grey;
-  Color get colorFF0000 => Color(0xFF000000);
+  Color get colorFF0000 => const Color(0xFF000000);
 
   // Color Shades - Each shade has its own dedicated constant
   Color get grey200 => Colors.grey.shade200;

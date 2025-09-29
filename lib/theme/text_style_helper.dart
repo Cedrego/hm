@@ -19,7 +19,7 @@ class TextStyleHelper {
         fontSize: 24.fSize,
         fontWeight: FontWeight.w600,
         fontFamily: 'Inter',
-        color: appTheme.gray_900,
+        color: appTheme.gray900,
       );
 
   // Title Styles
@@ -35,6 +35,6 @@ class TextStyleHelper {
         fontSize: 16.fSize,
         fontWeight: FontWeight.w400,
         fontFamily: 'Inter',
-        color: appTheme.gray_900,
+        color: appTheme.gray900,
       );
 }

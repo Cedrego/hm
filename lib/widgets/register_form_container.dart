@@ -59,9 +59,9 @@ class RegisterFormContainer extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       decoration: BoxDecoration(
-        color: appTheme.white_A700,
+        color: appTheme.whiteA700,
         border: Border.all(
-          color: appTheme.blue_gray_100,
+          color: appTheme.blueGray100,
           width: 1,
         ),
         borderRadius: BorderRadius.circular(8.h),

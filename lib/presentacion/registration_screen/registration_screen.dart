@@ -148,8 +148,8 @@ class RegistrationScreen extends StatelessWidget {
                           }
                         },
                         style: ElevatedButton.styleFrom(
-                          backgroundColor: appTheme.blue_gray_900,
-                          foregroundColor: appTheme.gray_100,
+                          backgroundColor: appTheme.blueGray900,
+                          foregroundColor: appTheme.gray100,
                           padding: EdgeInsets.symmetric(
                             vertical: 8.h,
                             horizontal: 30.h,
@@ -157,7 +157,7 @@ class RegistrationScreen extends StatelessWidget {
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(8.h),
                             side: BorderSide(
-                              color: appTheme.blue_gray_900,
+                              color: appTheme.blueGray900,
                               width: 1.h,
                             ),
                           ),

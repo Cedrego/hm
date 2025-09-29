@@ -85,7 +85,7 @@ class CustomEditText extends StatelessWidget {
         decoration: InputDecoration(
           hintText: hintText ?? '',
           hintStyle: TextStyleHelper.instance.title16RegularInter
-              .copyWith(color: appTheme.gray_400),
+              .copyWith(color: appTheme.gray400),
           contentPadding: EdgeInsets.only(
             top: 10.h,
             right: 16.h,
@@ -93,25 +93,25 @@ class CustomEditText extends StatelessWidget {
             left: 16.h,
           ),
           filled: true,
-          fillColor: appTheme.white_A700,
+          fillColor: appTheme.whiteA700,
           border: OutlineInputBorder(
             borderRadius: BorderRadius.circular(8.h),
             borderSide: BorderSide(
-              color: appTheme.blue_gray_100,
+              color: appTheme.blueGray100,
               width: 1.h,
             ),
           ),
           enabledBorder: OutlineInputBorder(
             borderRadius: BorderRadius.circular(8.h),
             borderSide: BorderSide(
-              color: appTheme.blue_gray_100,
+              color: appTheme.blueGray100,
               width: 1.h,
             ),
           ),
           focusedBorder: OutlineInputBorder(
             borderRadius: BorderRadius.circular(8.h),
             borderSide: BorderSide(
-              color: appTheme.blue_gray_100,
+              color: appTheme.blueGray100,
               width: 1.h,
             ),
           ),
