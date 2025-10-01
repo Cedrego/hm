@@ -1,18 +1,29 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import 'core/app_export.dart';
 
 var globalMessengerKey = GlobalKey<ScaffoldMessengerState>();
-void main() {
+
+Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  // Bloquear la Pantalla en Estado Vertical
   SystemChrome.setPreferredOrientations([DeviceOrientation.portraitUp]);
-  runApp(MyApp());
+
+  final prefs = await SharedPreferences.getInstance();
+  final isLoggedIn = prefs.getBool('isLoggedIn') ?? false;
+
+  runApp(
+    MyApp(
+      initialRoute: isLoggedIn ? AppRoutes.mainPage : AppRoutes.loginScreen,
+    ),
+  );
 }
 
 class MyApp extends StatelessWidget {
-  const MyApp({super.key});
+  final String initialRoute;
+
+  const MyApp({super.key, required this.initialRoute});
 
   @override
   Widget build(BuildContext context) {
@@ -21,7 +32,7 @@ class MyApp extends StatelessWidget {
         return MaterialApp(
           title: 'Hostel Mochileros',
           debugShowCheckedModeBanner: false,
-          initialRoute: AppRoutes.initialRoute,
+          initialRoute: initialRoute,
           routes: AppRoutes.routes,
           builder: (context, child) {
             return MediaQuery(

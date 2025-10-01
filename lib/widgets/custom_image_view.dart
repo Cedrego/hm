@@ -26,7 +26,8 @@ extension ImageTypeExtension on String {
 enum ImageType { svg, png, network, networkSvg, file, unknown }
 
 class CustomImageView extends StatelessWidget {
-  CustomImageView({super.key, 
+  CustomImageView({
+    super.key,
     String? imagePath,
     this.height,
     this.width,
@@ -39,8 +40,8 @@ class CustomImageView extends StatelessWidget {
     this.border,
     this.placeHolder,
   }) : imagePath = (imagePath == null || imagePath.isEmpty)
-            ? ImageConstant.imgImageNotFound
-            : imagePath;
+           ? ImageConstant.imgImageNotFound
+           : imagePath;
 
   ///[imagePath] is required parameter for showing image
   final String? imagePath;
@@ -75,15 +76,12 @@ class CustomImageView extends StatelessWidget {
   Widget _buildWidget() {
     return Padding(
       padding: margin ?? EdgeInsets.zero,
-      child: InkWell(
-        onTap: onTap,
-        child: _buildCircleImage(),
-      ),
+      child: InkWell(onTap: onTap, child: _buildCircleImage()),
     );
   }
 
   ///build the image with border radius
-  _buildCircleImage() {
+  Widget _buildCircleImage() {
     if (radius != null) {
       return ClipRRect(
         borderRadius: radius ?? BorderRadius.zero,
@@ -95,13 +93,10 @@ class CustomImageView extends StatelessWidget {
   }
 
   ///build the image with border and border radius style
-  _buildImageWithBorder() {
+  Widget _buildImageWithBorder() {
     if (border != null) {
       return Container(
-        decoration: BoxDecoration(
-          border: border,
-          borderRadius: radius,
-        ),
+        decoration: BoxDecoration(border: border, borderRadius: radius),
         child: _buildImageView(),
       );
     } else {
@@ -122,7 +117,9 @@ class CustomImageView extends StatelessWidget {
             fit: fit ?? BoxFit.contain,
             colorFilter: color != null
                 ? ColorFilter.mode(
-                    color ?? appTheme.transparentCustom, BlendMode.srcIn)
+                    color ?? appTheme.transparentCustom,
+                    BlendMode.srcIn,
+                  )
                 : null,
           ),
         );
@@ -142,7 +139,9 @@ class CustomImageView extends StatelessWidget {
           fit: fit ?? BoxFit.contain,
           colorFilter: color != null
               ? ColorFilter.mode(
-                  color ?? appTheme.transparentCustom, BlendMode.srcIn)
+                  color ?? appTheme.transparentCustom,
+                  BlendMode.srcIn,
+                )
               : null,
         );
       case ImageType.network:

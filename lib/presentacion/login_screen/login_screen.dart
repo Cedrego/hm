@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../core/app_export.dart';
 import '../../widgets/register_form_container.dart';
@@ -45,14 +46,17 @@ class LoginScreen extends StatelessWidget {
               Expanded(
                 child: SingleChildScrollView(
                   physics: AlwaysScrollableScrollPhysics(),
-                  keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
+                  keyboardDismissBehavior:
+                      ScrollViewKeyboardDismissBehavior.onDrag,
                   child: Form(
                     key: _formKey,
                     child: Column(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        SizedBox(height: MediaQuery.of(context).size.height * 0.1),
-                        
+                        SizedBox(
+                          height: MediaQuery.of(context).size.height * 0.1,
+                        ),
+
                         RegisterFormContainer(
                           title: 'Iniciar Sesión',
                           fields: [
@@ -81,7 +85,7 @@ class LoginScreen extends StatelessWidget {
                               width: double.infinity,
                               constraints: BoxConstraints(maxWidth: 500.h),
                               child: ElevatedButton(
-                                onPressed: _onLoginPressed,
+                                onPressed: () => _onLoginPressed(context),
                                 style: ElevatedButton.styleFrom(
                                   backgroundColor: appTheme.blueGray900,
                                   foregroundColor: appTheme.gray100,
@@ -135,7 +139,7 @@ class LoginScreen extends StatelessWidget {
                           ],
                         ),
                         SizedBox(
-                          height: MediaQuery.of(context).viewInsets.bottom > 0 
+                          height: MediaQuery.of(context).viewInsets.bottom > 0
                               ? MediaQuery.of(context).viewInsets.bottom + 20.h
                               : MediaQuery.of(context).size.height * 0.1,
                         ),
@@ -171,11 +175,22 @@ class LoginScreen extends StatelessWidget {
     return null;
   }
 
-  void _onLoginPressed() {
+  Future<void> _onLoginPressed(BuildContext context) async {
     if (_formKey.currentState?.validate() ?? false) {
+      // Guardamos el estado de login como true en SharedPreferences
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setBool('isLoggedIn', true);
+      
       emailController.clear();
       passwordController.clear();
-      print('Login pressed - Email: ${emailController.text}');
+
+      print('Login successful - Email: ${emailController.text}');
+
+      Navigator.pushNamedAndRemoveUntil(
+        context,
+        AppRoutes.mainPage,
+        (route) => false,
+      );
     }
   }
 
