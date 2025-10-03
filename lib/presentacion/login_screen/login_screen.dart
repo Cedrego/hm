@@ -1,16 +1,30 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../core/app_export.dart';
 import '../../widgets/register_form_container.dart';
+import '../../core/api_service.dart';
+import '../../core/auth_service.dart';
 
-class LoginScreen extends StatelessWidget {
-  LoginScreen({super.key});
+class LoginScreen extends StatefulWidget {
+  const LoginScreen({super.key});
 
+  @override
+  State<LoginScreen> createState() => _LoginScreenState();
+}
+
+class _LoginScreenState extends State<LoginScreen> {
   final TextEditingController emailController = TextEditingController();
   final TextEditingController passwordController = TextEditingController();
   final GlobalKey<FormState> _formKey = GlobalKey<FormState>();
+  bool _isLoading = false;
+
+  @override
+  void dispose() {
+    emailController.dispose();
+    passwordController.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -56,7 +70,6 @@ class LoginScreen extends StatelessWidget {
                         SizedBox(
                           height: MediaQuery.of(context).size.height * 0.1,
                         ),
-
                         RegisterFormContainer(
                           title: 'Iniciar Sesión',
                           fields: [
@@ -85,7 +98,7 @@ class LoginScreen extends StatelessWidget {
                               width: double.infinity,
                               constraints: BoxConstraints(maxWidth: 500.h),
                               child: ElevatedButton(
-                                onPressed: () => _onLoginPressed(context),
+                                onPressed: _isLoading ? null : () => _onLoginPressed(context),
                                 style: ElevatedButton.styleFrom(
                                   backgroundColor: appTheme.blueGray900,
                                   foregroundColor: appTheme.gray100,
@@ -101,14 +114,24 @@ class LoginScreen extends StatelessWidget {
                                     ),
                                   ),
                                   elevation: 0,
+                                  disabledBackgroundColor: Colors.grey,
                                 ),
-                                child: Text(
-                                  'Iniciar Sesión',
-                                  style: TextStyle(
-                                    fontSize: 18.fSize,
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                ),
+                                child: _isLoading
+                                    ? SizedBox(
+                                        height: 20.h,
+                                        width: 20.h,
+                                        child: CircularProgressIndicator(
+                                          strokeWidth: 2,
+                                          valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                                        ),
+                                      )
+                                    : Text(
+                                        'Iniciar Sesión',
+                                        style: TextStyle(
+                                          fontSize: 18.fSize,
+                                          fontWeight: FontWeight.bold,
+                                        ),
+                                      ),
                               ),
                             ),
                             SizedBox(height: 20.h),
@@ -176,21 +199,66 @@ class LoginScreen extends StatelessWidget {
   }
 
   Future<void> _onLoginPressed(BuildContext context) async {
-    if (_formKey.currentState?.validate() ?? false) {
-      // Guardamos el estado de login como true en SharedPreferences
-      final prefs = await SharedPreferences.getInstance();
-      await prefs.setBool('isLoggedIn', true);
-      
-      emailController.clear();
-      passwordController.clear();
+    // Validar el formulario
+    if (!(_formKey.currentState?.validate() ?? false)) {
+      return;
+    }
 
-      print('Login successful - Email: ${emailController.text}');
+    // Mostrar indicador de carga
+    setState(() {
+      _isLoading = true;
+    });
 
-      Navigator.pushNamedAndRemoveUntil(
-        context,
-        AppRoutes.mainPage,
-        (route) => false,
+    try {
+      // Llamar al API de login
+      final response = await ApiService.login(
+        emailController.text.trim(),
+        passwordController.text,
       );
+
+      // Verificar que la respuesta sea exitosa
+      if (response['success'] == true && response['usuario'] != null) {
+        final userData = response['usuario'];
+        
+        // Guardar sesión del usuario
+        await AuthService.saveUserSession(userData);
+
+        // Mostrar mensaje de éxito
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('¡Bienvenido ${userData['nombre']}!'),
+              backgroundColor: Colors.green,
+              duration: Duration(seconds: 2),
+            ),
+          );
+
+          // Navegar a la página principal
+          Navigator.pushNamedAndRemoveUntil(
+            context,
+            AppRoutes.mainPage,
+            (route) => false,
+          );
+        }
+      }
+    } catch (e) {
+      // Mostrar error
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(e.toString().replaceAll('Exception: ', '')),
+            backgroundColor: Colors.red,
+            duration: Duration(seconds: 3),
+          ),
+        );
+      }
+    } finally {
+      // Ocultar indicador de carga
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+      }
     }
   }
 

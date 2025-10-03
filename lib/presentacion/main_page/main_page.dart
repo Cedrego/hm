@@ -1,11 +1,33 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../core/app_export.dart';
+import '../../core/auth_service.dart';
 
-class MainPage extends StatelessWidget {
+class MainPage extends StatefulWidget {
   const MainPage({super.key});
+
+  @override
+  State<MainPage> createState() => _MainPageState();
+}
+
+class _MainPageState extends State<MainPage> {
+  Map<String, dynamic>? _userData;
+  bool _isLoading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadUserData();
+  }
+
+  Future<void> _loadUserData() async {
+    final userData = await AuthService.getUserData();
+    setState(() {
+      _userData = userData;
+      _isLoading = false;
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -38,191 +60,190 @@ class MainPage extends StatelessWidget {
         ),
         actions: [
           IconButton(
-  icon: const Icon(Icons.logout, color: Colors.black),
-  onPressed: () async {
-    final navigator = Navigator.of(context);
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Confirmación'),
-        content: const Text('¿Está seguro de cerrar sesión?'),
-        actions: [
-          TextButton(
-            onPressed: () => navigator.pop(false),
-            child: const Text('Cancelar'),
-          ),
-          TextButton(
-            onPressed: () => navigator.pop(true),
-            child: const Text('Cerrar sesión'),
+            icon: const Icon(Icons.logout, color: Colors.black),
+            onPressed: () => _onLogoutPressed(context),
           ),
         ],
       ),
-    );
-    if (confirmed == true) {
-      // Guardar estado de logout
-      final prefs = await SharedPreferences.getInstance();
-      await prefs.setBool('isLoggedIn', false);
-
-      // Navegar a loginScreen y eliminar todas las rutas previas
-      navigator.pushNamedAndRemoveUntil(
-        AppRoutes.loginScreen,
-        (route) => false,
-      );
-    }
-  },
-),
-
-        ],
-      ),
-      drawer: Drawer(
-        child: ListView(
-          padding: EdgeInsets.zero,
-          children: [
-            DrawerHeader(
-              decoration: const BoxDecoration(
-                color: Colors.blue,
-              ),
-              child: Text(
-                'Menú',
-                style: TextStyle(
-                  color: Colors.white,
-                  fontSize: 24,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-            ),
-            ListTile(
-              leading: const Icon(Icons.bed),
-              title: const Text('Habitaciones'),
-              onTap: () {
-                Navigator.pop(context);
-                // Navegar a la pantalla de Habitaciones
-                Navigator.pushNamed(context, '/habitaciones');
-              },
-            ),
-            ListTile(
-              leading: const Icon(Icons.calendar_today),
-              title: const Text('Reservas'),
-              onTap: () {
-                Navigator.pop(context);
-                // Navegar a la pantalla de Reservas
-                Navigator.pushNamed(context, '/reservas');
-              },
-            ),
-            ListTile(
-              leading: const Icon(Icons.person),
-              title: const Text('Perfil'),
-              onTap: () {
-                Navigator.pop(context);
-                // Navegar a la pantalla de Perfil
-                Navigator.pushNamed(context, '/perfil');
-              },
-            ),
-            ListTile(
-              leading: const Icon(Icons.info),
-              title: const Text('Información'),
-              onTap: () {
-                Navigator.pop(context);
-                // Navegar a la pantalla de Información
-                Navigator.pushNamed(context, '/informacion');
-              },
-            ),
-          ],
-        ),
-      ),
-      body: SafeArea(
-        child: Padding(
-          padding: EdgeInsets.symmetric(horizontal: 20.h, vertical: 20.h),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // Bienvenida
-              Text(
-                '¡Bienvenido!',
-                style: TextStyleHelper.instance.headline24SemiBoldInter
-                    .copyWith(color: Colors.black),
-              ),
-              SizedBox(height: 10.h),
-              Text(
-                'Has iniciado sesión exitosamente en Hostel Mochileros',
-                style: TextStyleHelper.instance.title16RegularInter.copyWith(
-                  color: Colors.grey[600],
-                ),
-              ),
-              SizedBox(height: 30.h),
-
-              // Tarjetas de funcionalidades en grid 2x2
-              Expanded(
-                child: GridView.count(
-                  crossAxisCount: 2,
-                  crossAxisSpacing: 16.h,
-                  mainAxisSpacing: 16.h,
-                  childAspectRatio: 1.0,
-                  children: [
-                    _buildFeatureCard(
-                      icon: Icons.bed,
-                      title: 'Habitaciones',
-                      color: Colors.blue,
-                      onTap: () {
-                        Navigator.pushNamed(context, '/habitaciones');
-                      },
-                    ),
-                    _buildFeatureCard(
-                      icon: Icons.calendar_today,
-                      title: 'Reservas',
-                      color: Colors.green,
-                      onTap: () {
-                        Navigator.pushNamed(context, '/reservas');
-                      },
-                    ),
-                    _buildFeatureCard(
-                      icon: Icons.person,
-                      title: 'Perfil',
-                      color: Colors.orange,
-                      onTap: () {
-                        Navigator.pushNamed(context, '/perfil');
-                      },
-                    ),
-                    _buildFeatureCard(
-                      icon: Icons.info,
-                      title: 'Información',
-                      color: Colors.purple,
-                      onTap: () {
-                        Navigator.pushNamed(context, '/informacion');
-                      },
-                    ),
-                  ],
-                ),
-              ),
-
-              // Información adicional
-              Container(
-                width: double.infinity,
-                padding: EdgeInsets.all(16.h),
-                decoration: BoxDecoration(
-                  color: Colors.grey[100],
-                  borderRadius: BorderRadius.circular(12.h),
-                ),
+      drawer: _buildDrawer(context),
+      body: _isLoading
+          ? Center(child: CircularProgressIndicator())
+          : SafeArea(
+              child: Padding(
+                padding: EdgeInsets.symmetric(horizontal: 20.h, vertical: 20.h),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
+                    // Bienvenida con nombre del usuario
                     Text(
-                      'Información del Hostel',
-                      style: TextStyleHelper.instance.title16RegularInter
+                      '¡Bienvenido${_userData?['nombre'] != null ? ', ${_userData!['nombre'].split(' ')[0]}' : ''}!',
+                      style: TextStyleHelper.instance.headline24SemiBoldInter
                           .copyWith(color: Colors.black),
                     ),
-                    SizedBox(height: 8.h),
+                    SizedBox(height: 10.h),
                     Text(
-                      'Horario de atención: 24/7\nTeléfono: +1 234 567 890\nEmail: info@hostelmochileros.com',
-                      style: TextStyleHelper.instance.title16RegularInter
-                          .copyWith(color: Colors.grey[600]),
+                      _userData?['email'] ?? 'Has iniciado sesión exitosamente',
+                      style: TextStyleHelper.instance.title16RegularInter.copyWith(
+                        color: Colors.grey[600],
+                      ),
+                    ),
+                    SizedBox(height: 30.h),
+
+                    // Tarjetas de funcionalidades en grid 2x2
+                    Expanded(
+                      child: GridView.count(
+                        crossAxisCount: 2,
+                        crossAxisSpacing: 16.h,
+                        mainAxisSpacing: 16.h,
+                        childAspectRatio: 1.0,
+                        children: [
+                          _buildFeatureCard(
+                            icon: Icons.bed,
+                            title: 'Habitaciones',
+                            color: Colors.blue,
+                            onTap: () {
+                              Navigator.pushNamed(context, '/habitaciones');
+                            },
+                          ),
+                          _buildFeatureCard(
+                            icon: Icons.calendar_today,
+                            title: 'Reservas',
+                            color: Colors.green,
+                            onTap: () {
+                              Navigator.pushNamed(context, '/reservas');
+                            },
+                          ),
+                          _buildFeatureCard(
+                            icon: Icons.person,
+                            title: 'Perfil',
+                            color: Colors.orange,
+                            onTap: () {
+                              _showUserProfile(context);
+                            },
+                          ),
+                          _buildFeatureCard(
+                            icon: Icons.info,
+                            title: 'Información',
+                            color: Colors.purple,
+                            onTap: () {
+                              Navigator.pushNamed(context, '/informacion');
+                            },
+                          ),
+                        ],
+                      ),
+                    ),
+
+                    // Información adicional
+                    Container(
+                      width: double.infinity,
+                      padding: EdgeInsets.all(16.h),
+                      decoration: BoxDecoration(
+                        color: Colors.grey[100],
+                        borderRadius: BorderRadius.circular(12.h),
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Información del Hostel',
+                            style: TextStyleHelper.instance.title16RegularInter
+                                .copyWith(color: Colors.black),
+                          ),
+                          SizedBox(height: 8.h),
+                          Text(
+                            'Horario de atención: 24/7\nTeléfono: +1 234 567 890\nEmail: info@hostelmochileros.com',
+                            style: TextStyleHelper.instance.title16RegularInter
+                                .copyWith(color: Colors.grey[600]),
+                          ),
+                        ],
+                      ),
                     ),
                   ],
                 ),
               ),
-            ],
+            ),
+    );
+  }
+
+  Widget _buildDrawer(BuildContext context) {
+    return Drawer(
+      child: ListView(
+        padding: EdgeInsets.zero,
+        children: [
+          DrawerHeader(
+            decoration: BoxDecoration(
+              color: Colors.blue,
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisAlignment: MainAxisAlignment.end,
+              children: [
+                CircleAvatar(
+                  radius: 30,
+                  backgroundColor: Colors.white,
+                  child: Icon(Icons.person, size: 40, color: Colors.blue),
+                ),
+                SizedBox(height: 10),
+                Text(
+                  _userData?['nombre'] ?? 'Usuario',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                Text(
+                  _userData?['email'] ?? '',
+                  style: TextStyle(
+                    color: Colors.white70,
+                    fontSize: 14,
+                  ),
+                ),
+              ],
+            ),
           ),
-        ),
+          ListTile(
+            leading: const Icon(Icons.bed),
+            title: const Text('Habitaciones'),
+            onTap: () {
+              Navigator.pop(context);
+              Navigator.pushNamed(context, '/habitaciones');
+            },
+          ),
+          ListTile(
+            leading: const Icon(Icons.calendar_today),
+            title: const Text('Reservas'),
+            onTap: () {
+              Navigator.pop(context);
+              Navigator.pushNamed(context, '/reservas');
+            },
+          ),
+          ListTile(
+            leading: const Icon(Icons.person),
+            title: const Text('Mi Perfil'),
+            onTap: () {
+              Navigator.pop(context);
+              _showUserProfile(context);
+            },
+          ),
+          ListTile(
+            leading: const Icon(Icons.info),
+            title: const Text('Información'),
+            onTap: () {
+              Navigator.pop(context);
+              Navigator.pushNamed(context, '/informacion');
+            },
+          ),
+          Divider(),
+          ListTile(
+            leading: const Icon(Icons.logout, color: Colors.red),
+            title: const Text('Cerrar Sesión', style: TextStyle(color: Colors.red)),
+            onTap: () {
+              Navigator.pop(context);
+              _onLogoutPressed(context);
+            },
+          ),
+        ],
       ),
     );
   }
@@ -265,5 +286,99 @@ class MainPage extends StatelessWidget {
         ),
       ),
     );
+  }
+
+  void _showUserProfile(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Row(
+          children: [
+            Icon(Icons.person, color: Colors.blue),
+            SizedBox(width: 10),
+            Text('Mi Perfil'),
+          ],
+        ),
+        content: _userData == null
+            ? Text('No se pudo cargar el perfil')
+            : Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  _buildProfileItem('Nombre', _userData!['nombre'] ?? 'N/A'),
+                  _buildProfileItem('Email', _userData!['email'] ?? 'N/A'),
+                  _buildProfileItem('Documento', _userData!['documento'] ?? 'N/A'),
+                  _buildProfileItem('Contacto', _userData!['contacto'] ?? 'N/A'),
+                ],
+              ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: Text('Cerrar'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildProfileItem(String label, String value) {
+    return Padding(
+      padding: EdgeInsets.symmetric(vertical: 8.h),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            label,
+            style: TextStyle(
+              fontSize: 12,
+              color: Colors.grey[600],
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+          SizedBox(height: 4),
+          Text(
+            value,
+            style: TextStyle(
+              fontSize: 16,
+              color: Colors.black,
+            ),
+          ),
+          Divider(),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _onLogoutPressed(BuildContext context) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Confirmación'),
+        content: const Text('¿Está seguro de cerrar sesión?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancelar'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            style: TextButton.styleFrom(foregroundColor: Colors.red),
+            child: const Text('Cerrar sesión'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed == true && mounted) {
+      // Cerrar sesión
+      await AuthService.logout();
+
+      // Navegar a loginScreen y eliminar todas las rutas previas
+      Navigator.pushNamedAndRemoveUntil(
+        context,
+        AppRoutes.loginScreen,
+        (route) => false,
+      );
+    }
   }
 }
