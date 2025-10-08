@@ -31,6 +31,10 @@ class _MainPageState extends State<MainPage> {
 
   @override
   Widget build(BuildContext context) {
+    // Definimos las rutas estáticas de AppRoutes
+    final String roomListRoute = AppRoutes.roomListScreen;
+    final String roomCreationRoute = AppRoutes.roomCreationScreen; // 🎯 Nueva ruta
+
     return Scaffold(
       backgroundColor: const Color(0XFFFFFFFF),
       appBar: AppBar(
@@ -65,9 +69,9 @@ class _MainPageState extends State<MainPage> {
           ),
         ],
       ),
-      drawer: _buildDrawer(context),
+      drawer: _buildDrawer(context, roomListRoute, roomCreationRoute), // Pasamos la nueva ruta
       body: _isLoading
-          ? Center(child: CircularProgressIndicator())
+          ? const Center(child: CircularProgressIndicator())
           : SafeArea(
               child: Padding(
                 padding: EdgeInsets.symmetric(horizontal: 20.h, vertical: 20.h),
@@ -89,7 +93,7 @@ class _MainPageState extends State<MainPage> {
                     ),
                     SizedBox(height: 30.h),
 
-                    // Tarjetas de funcionalidades en grid 2x2
+                    // Tarjetas de funcionalidades en Grid 3x2 (Ajustado a 2x3 para la nueva tarjeta)
                     Expanded(
                       child: GridView.count(
                         crossAxisCount: 2,
@@ -97,14 +101,25 @@ class _MainPageState extends State<MainPage> {
                         mainAxisSpacing: 16.h,
                         childAspectRatio: 1.0,
                         children: [
+                          // 1. Habitaciones (Reservar)
                           _buildFeatureCard(
                             icon: Icons.bed,
                             title: 'Habitaciones',
                             color: Colors.blue,
                             onTap: () {
-                              Navigator.pushNamed(context, '/habitaciones');
+                              Navigator.pushNamed(context, roomListRoute);
                             },
                           ),
+                          // 2. Crear Habitación (Nueva Tarjeta)
+                          _buildFeatureCard(
+                            icon: Icons.add_box,
+                            title: 'Crear Habitación',
+                            color: Colors.indigo,
+                            onTap: () {
+                              Navigator.pushNamed(context, roomCreationRoute);
+                            },
+                          ),
+                          // 3. Reservas
                           _buildFeatureCard(
                             icon: Icons.calendar_today,
                             title: 'Reservas',
@@ -113,6 +128,7 @@ class _MainPageState extends State<MainPage> {
                               Navigator.pushNamed(context, '/reservas');
                             },
                           ),
+                          // 4. Perfil
                           _buildFeatureCard(
                             icon: Icons.person,
                             title: 'Perfil',
@@ -121,6 +137,7 @@ class _MainPageState extends State<MainPage> {
                               _showUserProfile(context);
                             },
                           ),
+                          // 5. Información
                           _buildFeatureCard(
                             icon: Icons.info,
                             title: 'Información',
@@ -129,6 +146,7 @@ class _MainPageState extends State<MainPage> {
                               Navigator.pushNamed(context, '/informacion');
                             },
                           ),
+                          // Puedes añadir una sexta tarjeta si tu GridView tiene espacio
                         ],
                       ),
                     ),
@@ -165,28 +183,30 @@ class _MainPageState extends State<MainPage> {
     );
   }
 
-  Widget _buildDrawer(BuildContext context) {
+  // --- Widget para construir el Drawer ---
+  Widget _buildDrawer(
+      BuildContext context, String roomListRoute, String roomCreationRoute) {
     return Drawer(
       child: ListView(
         padding: EdgeInsets.zero,
         children: [
           DrawerHeader(
-            decoration: BoxDecoration(
+            decoration: const BoxDecoration(
               color: Colors.blue,
             ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               mainAxisAlignment: MainAxisAlignment.end,
               children: [
-                CircleAvatar(
+                const CircleAvatar(
                   radius: 30,
                   backgroundColor: Colors.white,
                   child: Icon(Icons.person, size: 40, color: Colors.blue),
                 ),
-                SizedBox(height: 10),
+                const SizedBox(height: 10),
                 Text(
                   _userData?['nombre'] ?? 'Usuario',
-                  style: TextStyle(
+                  style: const TextStyle(
                     color: Colors.white,
                     fontSize: 18,
                     fontWeight: FontWeight.bold,
@@ -194,7 +214,7 @@ class _MainPageState extends State<MainPage> {
                 ),
                 Text(
                   _userData?['email'] ?? '',
-                  style: TextStyle(
+                  style: const TextStyle(
                     color: Colors.white70,
                     fontSize: 14,
                   ),
@@ -202,14 +222,25 @@ class _MainPageState extends State<MainPage> {
               ],
             ),
           ),
+          // Habitaciones (Reservar)
           ListTile(
             leading: const Icon(Icons.bed),
             title: const Text('Habitaciones'),
             onTap: () {
               Navigator.pop(context);
-              Navigator.pushNamed(context, '/habitaciones');
+              Navigator.pushNamed(context, roomListRoute);
             },
           ),
+          // 🎯 Crear Habitación (Añadido al Drawer)
+          ListTile(
+            leading: const Icon(Icons.add_box, color: Colors.indigo),
+            title: const Text('Crear Habitación'),
+            onTap: () {
+              Navigator.pop(context);
+              Navigator.pushNamed(context, roomCreationRoute);
+            },
+          ),
+          // Reservas
           ListTile(
             leading: const Icon(Icons.calendar_today),
             title: const Text('Reservas'),
@@ -234,7 +265,7 @@ class _MainPageState extends State<MainPage> {
               Navigator.pushNamed(context, '/informacion');
             },
           ),
-          Divider(),
+          const Divider(),
           ListTile(
             leading: const Icon(Icons.logout, color: Colors.red),
             title: const Text('Cerrar Sesión', style: TextStyle(color: Colors.red)),
@@ -248,6 +279,7 @@ class _MainPageState extends State<MainPage> {
     );
   }
 
+  // --- Widget para construir las tarjetas de funcionalidades ---
   Widget _buildFeatureCard({
     required IconData icon,
     required String title,
@@ -288,11 +320,13 @@ class _MainPageState extends State<MainPage> {
     );
   }
 
+  // --- Métodos Auxiliares ---
+
   void _showUserProfile(BuildContext context) {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: Row(
+        title: const Row(
           children: [
             Icon(Icons.person, color: Colors.blue),
             SizedBox(width: 10),
@@ -300,7 +334,7 @@ class _MainPageState extends State<MainPage> {
           ],
         ),
         content: _userData == null
-            ? Text('No se pudo cargar el perfil')
+            ? const Text('No se pudo cargar el perfil')
             : Column(
                 mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -314,7 +348,7 @@ class _MainPageState extends State<MainPage> {
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: Text('Cerrar'),
+            child: const Text('Cerrar'),
           ),
         ],
       ),
@@ -335,15 +369,15 @@ class _MainPageState extends State<MainPage> {
               fontWeight: FontWeight.bold,
             ),
           ),
-          SizedBox(height: 4),
+          const SizedBox(height: 4),
           Text(
             value,
-            style: TextStyle(
+            style: const TextStyle(
               fontSize: 16,
               color: Colors.black,
             ),
           ),
-          Divider(),
+          const Divider(),
         ],
       ),
     );
