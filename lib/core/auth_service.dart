@@ -7,6 +7,7 @@ class AuthService {
   static const String _userDataKey = 'userData';
   static const String _userIdKey = 'userId';
   static const String _userEmailKey = 'userEmail';
+  static const String _userRolKey = 'userRol'; // ← NUEVO
 
   // Verificar si el usuario está logueado
   static Future<bool> isLoggedIn() async {
@@ -22,8 +23,9 @@ class AuthService {
     await prefs.setString(_userDataKey, jsonEncode(userData));
     await prefs.setString(_userIdKey, userData['id'] ?? '');
     await prefs.setString(_userEmailKey, userData['email'] ?? '');
+    await prefs.setString(_userRolKey, userData['rol'] ?? 'invitado'); // ← NUEVO
     
-    print('✅ Sesión guardada: ${userData['email']}');
+    print('✅ Sesión guardada: ${userData['email']} - Rol: ${userData['rol']}');
   }
 
   // Obtener datos del usuario actual
@@ -49,6 +51,24 @@ class AuthService {
     return prefs.getString(_userEmailKey);
   }
 
+  // ← NUEVO: Obtener rol del usuario actual
+  static Future<String> getUserRol() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getString(_userRolKey) ?? 'invitado';
+  }
+
+  // ← NUEVO: Verificar si el usuario es admin
+  static Future<bool> isAdmin() async {
+    final rol = await getUserRol();
+    return rol == 'admin';
+  }
+
+  // ← NUEVO: Verificar si el usuario es invitado
+  static Future<bool> isInvitado() async {
+    final rol = await getUserRol();
+    return rol == 'invitado';
+  }
+
   // Cerrar sesión
   static Future<void> logout() async {
     final prefs = await SharedPreferences.getInstance();
@@ -57,6 +77,7 @@ class AuthService {
     await prefs.remove(_userDataKey);
     await prefs.remove(_userIdKey);
     await prefs.remove(_userEmailKey);
+    await prefs.remove(_userRolKey); // ← NUEVO
     
     print('✅ Sesión cerrada');
   }

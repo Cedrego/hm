@@ -1,76 +1,143 @@
-
 import 'package:flutter/material.dart';
 
-import 'models.dart';
-
-class UserProfileScreen extends StatelessWidget {
-  final User user;
+class UserProfileScreen extends StatefulWidget {
+  final Map<String, dynamic> user;
 
   const UserProfileScreen({required this.user, super.key});
 
   @override
+  State<UserProfileScreen> createState() => _UserProfileScreenState();
+}
+
+class _UserProfileScreenState extends State<UserProfileScreen> {
+  List<Map<String, dynamic>> reservations = []; // Temporal, luego viene de API
+  bool isLoading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadReservations();
+  }
+
+  Future<void> _loadReservations() async {
+    // Aquí llamarías a tu API
+    // final data = await ApiService.getReservasUsuario(widget.user['_id']);
+    await Future.delayed(const Duration(seconds: 1)); // Simulación
+    setState(() {
+      reservations = []; // Vacío por ahora
+      isLoading = false;
+    });
+  }
+
+  @override
   Widget build(BuildContext context) {
-    // Simulación de las reservas del usuario para la parte inferior de la imagen 3
-    final List<Reservation> userReservations = [
-      // Una reserva (como el ejemplo en la imagen 3)
-      Reservation(
-        roomName: 'Habitación Familiar',
-        services: 'Jacuzzi privado',
-        checkIn: DateTime(2025, 9, 23),
-        checkOut: DateTime(2025, 9, 27),
-        nights: 4,
-        totalPrice: 136,
-        user: user,
-      ),
-      // ... más reservas simuladas
-    ];
+    final String nick = widget.user['nick'] ?? widget.user['nombre'] ?? 'Usuario';
+    final String nombre = widget.user['nombre'] ?? 'Sin nombre';
+    final String email = widget.user['email'] ?? 'Sin email';
+    final String di = widget.user['di'] ?? widget.user['cedula'] ?? 'Sin documento';
+    final String contacto = widget.user['telefono'] ?? widget.user['contacto'] ?? 'Sin contacto';
+    final String avatarUrl = widget.user['avatarUrl'] ?? widget.user['avatar'] ?? '';
 
     return Scaffold(
-      // Usar un Container para simular el fondo teal
       body: Container(
-        color: const Color(0xFF008080),
+        color: const Color(0xFF00897B),
         child: SafeArea(
           child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Barra superior y botón de menú (simulado)
-              const Padding(
-                padding: EdgeInsets.all(16.0),
-                child: Icon(Icons.menu, color: Colors.white, size: 30),
+              Padding(
+                padding: const EdgeInsets.all(16.0),
+                child: Row(
+                  children: [
+                    IconButton(
+                      icon: const Icon(Icons.arrow_back, color: Colors.white),
+                      onPressed: () => Navigator.pop(context),
+                    ),
+                    const Expanded(
+                      child: Text(
+                        'Perfil de Usuario',
+                        style: TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.bold),
+                        textAlign: TextAlign.center,
+                      ),
+                    ),
+                    const SizedBox(width: 48),
+                  ],
+                ),
               ),
               Expanded(
                 child: SingleChildScrollView(
                   child: Padding(
                     padding: const EdgeInsets.all(20.0),
                     child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.center,
                       children: [
-                        // Avatar del usuario
+                        // Avatar
                         CircleAvatar(
                           radius: 60,
-                          // Simulación de la imagen
-                          backgroundImage: AssetImage(user.avatarUrl),
+                          backgroundColor: Colors.white,
+                          child: avatarUrl.isNotEmpty
+                              ? ClipOval(
+                                  child: Image.network(
+                                    avatarUrl,
+                                    width: 120,
+                                    height: 120,
+                                    fit: BoxFit.cover,
+                                    errorBuilder: (_, __, ___) => Text(
+                                      nombre[0].toUpperCase(),
+                                      style: const TextStyle(fontSize: 48, color: Color(0xFF00897B)),
+                                    ),
+                                  ),
+                                )
+                              : Text(
+                                  nombre[0].toUpperCase(),
+                                  style: const TextStyle(fontSize: 48, color: Color(0xFF00897B)),
+                                ),
                         ),
-                        const SizedBox(height: 20),
+                        const SizedBox(height: 24),
 
-                        // Detalles del Usuario
-                        Text('Nick: ${user.nick}', style: const TextStyle(color: Colors.white)),
-                        Text('Nombre: ${user.name}', style: const TextStyle(color: Colors.white)),
-                        Text('Email: ${user.email}', style: const TextStyle(color: Colors.white)),
-                        Text('DI: ${user.di}', style: const TextStyle(color: Colors.white)),
-                        Text('Contacto: ${user.contact}', style: const TextStyle(color: Colors.white)),
+                        // Info Card
+                        Card(
+                          child: Padding(
+                            padding: const EdgeInsets.all(20),
+                            child: Column(
+                              children: [
+                                _buildInfoRow('Nick', nick),
+                                const Divider(),
+                                _buildInfoRow('Nombre', nombre),
+                                const Divider(),
+                                _buildInfoRow('Email', email),
+                                const Divider(),
+                                _buildInfoRow('Documento', di),
+                                const Divider(),
+                                _buildInfoRow('Contacto', contacto),
+                              ],
+                            ),
+                          ),
+                        ),
                         const SizedBox(height: 30),
 
-                        // Título Reservas
-                        const Text('Reservas:', style: TextStyle(
-                            color: Colors.white,
-                            fontSize: 20,
-                            fontWeight: FontWeight.bold
-                        )),
-                        const SizedBox(height: 10),
+                        const Text(
+                          'Mis Reservas',
+                          style: TextStyle(color: Colors.white, fontSize: 22, fontWeight: FontWeight.bold),
+                        ),
+                        const SizedBox(height: 16),
 
-                        // Lista de Reservas del Usuario
-                        ...userReservations.map((res) => UserReservationCard(reservation: res)).toList(),
+                        // Reservas
+                        if (isLoading)
+                          const CircularProgressIndicator(color: Colors.white)
+                        else if (reservations.isEmpty)
+                          const Card(
+                            child: Padding(
+                              padding: EdgeInsets.all(32),
+                              child: Column(
+                                children: [
+                                  Icon(Icons.event_busy, size: 60, color: Colors.grey),
+                                  SizedBox(height: 16),
+                                  Text('No hay reservas registradas'),
+                                ],
+                              ),
+                            ),
+                          )
+                        else
+                          ...reservations.map((res) => _buildReservationCard(res)),
                       ],
                     ),
                   ),
@@ -82,25 +149,24 @@ class UserProfileScreen extends StatelessWidget {
       ),
     );
   }
-}
 
-// Widget para mostrar una reserva en la pantalla de perfil (imagen 3)
-class UserReservationCard extends StatelessWidget {
-  final Reservation reservation;
+  Widget _buildInfoRow(String label, String value) {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: [
+        Text(label, style: const TextStyle(fontWeight: FontWeight.w500)),
+        Text(value, style: const TextStyle(fontWeight: FontWeight.bold)),
+      ],
+    );
+  }
 
-  const UserReservationCard({required this.reservation, super.key});
-
-  @override
-  Widget build(BuildContext context) {
+  Widget _buildReservationCard(Map<String, dynamic> reservation) {
     return Card(
       margin: const EdgeInsets.symmetric(vertical: 8),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
       child: Padding(
-        padding: const EdgeInsets.all(12.0),
+        padding: const EdgeInsets.all(12),
         child: Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Imagen de la Habitación (simulada)
             Container(
               width: 80,
               height: 80,
@@ -108,21 +174,20 @@ class UserReservationCard extends StatelessWidget {
                 borderRadius: BorderRadius.circular(8),
                 color: Colors.grey[300],
               ),
-              // child: Image.asset('assets/room_image.jpg', fit: BoxFit.cover),
+              child: const Icon(Icons.hotel, size: 40, color: Colors.grey),
             ),
             const SizedBox(width: 15),
-            // Detalles de la Reserva
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(reservation.roomName, style: const TextStyle(fontWeight: FontWeight.bold)),
-                  Text('• ${reservation.services}'),
-                  // Simulación de los datos específicos de la imagen 3
-                  Text('Check-in: 23/09/2025'),
-                  Text('Check-out: 27/09/2025'),
-                  Text('Noches: ${reservation.nights}'),
-                  Text('Precio total: USD ${reservation.totalPrice}'),
+                  Text(
+                    reservation['nombreHabitacion'] ?? 'Habitación',
+                    style: const TextStyle(fontWeight: FontWeight.bold),
+                  ),
+                  Text('Check-in: ${reservation['fechaCheckIn']}'),
+                  Text('Check-out: ${reservation['fechaCheckOut']}'),
+                  Text('Total: USD \$${reservation['precioTotal']}'),
                 ],
               ),
             ),

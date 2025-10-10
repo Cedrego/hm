@@ -34,6 +34,7 @@ class _MainPageState extends State<MainPage> {
     // Definimos las rutas estáticas de AppRoutes
     final String roomListRoute = AppRoutes.roomListScreen;
     final String roomCreationRoute = AppRoutes.roomCreationScreen; // 🎯 Nueva ruta
+    final bool isAdmin = _userData?['rol'] == 'admin';
 
     return Scaffold(
       backgroundColor: const Color(0XFFFFFFFF),
@@ -110,15 +111,17 @@ class _MainPageState extends State<MainPage> {
                               Navigator.pushNamed(context, roomListRoute);
                             },
                           ),
-                          // 2. Crear Habitación (Nueva Tarjeta)
-                          _buildFeatureCard(
-                            icon: Icons.add_box,
-                            title: 'Crear Habitación',
-                            color: Colors.indigo,
-                            onTap: () {
-                              Navigator.pushNamed(context, roomCreationRoute);
-                            },
-                          ),
+                          // 2. --- LÓGICA CONDICIONAL EN GRIDVIEW ---
+                          // Solo se muestra si el usuario es admin
+                          if (isAdmin)
+                            _buildFeatureCard(
+                              icon: Icons.add_box,
+                              title: 'Crear Habitación',
+                              color: Colors.indigo,
+                              onTap: () {
+                                Navigator.pushNamed(context, roomCreationRoute);
+                              },
+                            ),
                           // 3. Reservas
                           _buildFeatureCard(
                             icon: Icons.calendar_today,

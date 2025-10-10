@@ -68,4 +68,60 @@ class ApiService {
       throw Exception('Error de conexión: $e');
     }
   }
+
+   static Future<Map<String, dynamic>> crearHabitacion({
+    required String nombre,
+    required String descripcion,
+    required double precio,
+    required List<String> servicios,
+    String? imagenUrl,
+  }) async {
+    try {
+      final response = await http.post(
+        Uri.parse('$baseUrl/habitaciones'),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({
+          'nombre': nombre,
+          'descripcion': descripcion,
+          'precio': precio,
+          'servicios': servicios,
+          'imagenUrl': imagenUrl,
+        }),
+      );
+
+      final responseData = jsonDecode(response.body);
+
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        if (responseData['success'] == true) {
+          return responseData;
+        } else {
+          throw Exception(responseData['message'] ?? 'Error al crear habitación');
+        }
+      } else {
+        throw Exception(responseData['message'] ?? 'Error del servidor (${response.statusCode})');
+      }
+    } catch (e) {
+      throw Exception('Error de conexión: $e');
+    }
+  }
+
+  // Obtener todas las habitaciones
+  static Future<List<dynamic>> getHabitaciones() async {
+    try {
+      final response = await http.get(
+        Uri.parse('$baseUrl/habitaciones'),
+        headers: {'Content-Type': 'application/json'},
+      );
+
+      final responseData = jsonDecode(response.body);
+
+      if (response.statusCode == 200) {
+        return responseData['habitaciones'] ?? [];
+      } else {
+        throw Exception('Error al obtener habitaciones');
+      }
+    } catch (e) {
+      throw Exception('Error de conexión: $e');
+    }
+  }
 }
