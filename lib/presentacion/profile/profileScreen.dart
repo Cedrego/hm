@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'dart:convert';
+import 'dart:typed_data';
 import '../custom_app_bar.dart';
 import '../../core/auth_service.dart'; // 🟢 Importa AuthService
 import '../app_drawer.dart'; // 🟢 Importa AppDrawer
@@ -9,6 +11,41 @@ class ProfileScreen extends StatelessWidget {
    final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
 
    ProfileScreen({super.key, required this.userData});
+
+
+  // Método para construir el avatar con la imagen
+  Widget _buildAvatar() {
+    final String? imagenBase64 = userData?['imagen'];
+    
+    // Si no hay imagen o es "vacio"
+    if (imagenBase64 == null || 
+        imagenBase64.isEmpty || 
+        imagenBase64 == 'vacio') {
+      return const CircleAvatar(
+        radius: 70,
+        backgroundColor: Colors.white,
+        child: Icon(Icons.person, size: 40, color: Colors.blue),
+      );
+    }
+
+    // Si hay imagen, decodificar y mostrar
+    try {
+      Uint8List bytes = base64Decode(imagenBase64);
+      return CircleAvatar(
+        radius: 70,
+        backgroundColor: Colors.white,
+        backgroundImage: MemoryImage(bytes),
+      );
+    } catch (e) {
+      print('❌ Error al decodificar imagen del usuario: $e');
+      // Si hay error, mostrar avatar por defecto
+      return const CircleAvatar(
+        radius: 30,
+        backgroundColor: Colors.white,
+        child: Icon(Icons.person, size: 40, color: Colors.blue),
+      );
+    }
+  }
 
   // 🟢 Función para manejar el cierre de sesión 🟢
   Future<void> _onLogoutPressed(BuildContext context) async {
@@ -63,13 +100,9 @@ class ProfileScreen extends StatelessWidget {
          body: Padding(
             padding: const EdgeInsets.all(16.0),
             child: Column(
-               crossAxisAlignment: CrossAxisAlignment.start,
+               crossAxisAlignment: CrossAxisAlignment.center,
                children: [
-                  const CircleAvatar(
-                     radius: 50,
-                     backgroundColor: Colors.blue,
-                     child: Icon(Icons.person, size: 50, color: Colors.white),
-                  ),
+                   _buildAvatar(),
                   const SizedBox(height: 20),
                   _buildProfileItem('Nombre', userData['nombre'] ?? 'N/A'),
                   _buildProfileItem('Email', userData['email'] ?? 'N/A'),

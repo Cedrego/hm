@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'dart:convert';
+import 'dart:typed_data';
 import '../core/app_export.dart'; // Ajusta esta ruta si es necesario
 
 class AppDrawer extends StatelessWidget {
@@ -12,6 +14,40 @@ class AppDrawer extends StatelessWidget {
     required this.isAdmin,
     required this.onLogoutPressed,
   });
+
+  // Método para construir el avatar con la imagen
+  Widget _buildAvatar() {
+    final String? imagenBase64 = userData?['imagen'];
+    
+    // Si no hay imagen o es "vacio"
+    if (imagenBase64 == null || 
+        imagenBase64.isEmpty || 
+        imagenBase64 == 'vacio') {
+      return const CircleAvatar(
+        radius: 30,
+        backgroundColor: Colors.white,
+        child: Icon(Icons.person, size: 40, color: Colors.blue),
+      );
+    }
+
+    // Si hay imagen, decodificar y mostrar
+    try {
+      Uint8List bytes = base64Decode(imagenBase64);
+      return CircleAvatar(
+        radius: 30,
+        backgroundColor: Colors.white,
+        backgroundImage: MemoryImage(bytes),
+      );
+    } catch (e) {
+      print('❌ Error al decodificar imagen del usuario: $e');
+      // Si hay error, mostrar avatar por defecto
+      return const CircleAvatar(
+        radius: 30,
+        backgroundColor: Colors.white,
+        child: Icon(Icons.person, size: 40, color: Colors.blue),
+      );
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -34,11 +70,7 @@ class AppDrawer extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               mainAxisAlignment: MainAxisAlignment.end,
               children: [
-                const CircleAvatar(
-                  radius: 30,
-                  backgroundColor: Colors.white,
-                  child: Icon(Icons.person, size: 40, color: Colors.blue),
-                ),
+                  _buildAvatar(), // ← Aquí mostramos la imagen
                 const SizedBox(height: 10),
                 Text(
                   userData?['nombre'] ?? 'Usuario',

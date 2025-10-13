@@ -2,7 +2,7 @@ import 'package:http/http.dart' as http;
 import 'dart:convert';
 
 class ApiService {
-  static const String baseUrl = 'http://192.168.1.6:8081/api';
+  static const String baseUrl = 'http://192.168.1.4:8081/api';
 
   // Login
   static Future<Map<String, dynamic>> login(String email, String password) async {
@@ -70,40 +70,40 @@ class ApiService {
   }
 
    static Future<Map<String, dynamic>> crearHabitacion({
-    required String nombre,
-    required String descripcion,
-    required double precio,
-    required List<String> servicios,
-    String? imagenUrl,
-  }) async {
-    try {
-      final response = await http.post(
-        Uri.parse('$baseUrl/habitaciones'),
-        headers: {'Content-Type': 'application/json'},
-        body: jsonEncode({
-          'nombre': nombre,
-          'descripcion': descripcion,
-          'precio': precio,
-          'servicios': servicios,
-          'imagenUrl': imagenUrl,
-        }),
-      );
+  required String nombre,
+  required String descripcion,
+  required double precio,
+  required List<String> servicios,
+  String? imagenBase64, // ← Cambio de imagenUrl a imagenBase64
+}) async {
+  try {
+    final response = await http.post(
+      Uri.parse('$baseUrl/habitaciones'),
+      headers: {'Content-Type': 'application/json'},
+      body: jsonEncode({
+        'nombre': nombre,
+        'descripcion': descripcion,
+        'precio': precio,
+        'servicios': servicios,
+        'imagen': imagenBase64, // ← Cambio de 'imagenUrl' a 'imagen'
+      }),
+    );
 
-      final responseData = jsonDecode(response.body);
+    final responseData = jsonDecode(response.body);
 
-      if (response.statusCode == 200 || response.statusCode == 201) {
-        if (responseData['success'] == true) {
-          return responseData;
-        } else {
-          throw Exception(responseData['message'] ?? 'Error al crear habitación');
-        }
+    if (response.statusCode == 200 || response.statusCode == 201) {
+      if (responseData['success'] == true) {
+        return responseData;
       } else {
-        throw Exception(responseData['message'] ?? 'Error del servidor (${response.statusCode})');
+        throw Exception(responseData['message'] ?? 'Error al crear habitación');
       }
-    } catch (e) {
-      throw Exception('Error de conexión: $e');
+    } else {
+      throw Exception(responseData['message'] ?? 'Error del servidor (${response.statusCode})');
     }
+  } catch (e) {
+    throw Exception('Error de conexión: $e');
   }
+}
 
   // Obtener todas las habitaciones
   static Future<List<dynamic>> getHabitaciones() async {

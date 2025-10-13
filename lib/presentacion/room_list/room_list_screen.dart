@@ -4,6 +4,8 @@ import '../../core/auth_service.dart';
 import '../custom_app_bar.dart'; 
 import '../app_drawer.dart'; 
 import '../../core/app_export.dart'; // Para AppRoutes
+import 'dart:convert';
+import 'dart:typed_data';
 
 class RoomListScreen extends StatefulWidget {
   // 🟢 Eliminado el parámetro 'user' ya que se carga con AuthService.
@@ -224,7 +226,7 @@ Widget _buildRoomListItem(Map<String, dynamic> room) {
     final double precio = (room['precio'] as num?)?.toDouble() ?? 0.0;
     
     // La clave de la imagen de la API es 'imagenUrl'
-    final String imagen = (room['imagenUrl'] as String?) ?? '';
+    final String? imagenBase64 = room['imagen'] as String?;
     
     // 🟢 CORRECCIÓN: La clave de servicios de la API es 'servicios'
     final List<String> serviciosAdicionales = (room['servicios'] as List<dynamic>?)
@@ -252,34 +254,7 @@ Widget _buildRoomListItem(Map<String, dynamic> room) {
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Container(
-              width: 70,
-              height: 70,
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(8),
-                color: Colors.grey[300],
-              ),
-              child: ClipRRect(
-                borderRadius: BorderRadius.circular(8),
-                child: imagen.isNotEmpty
-                    ? (imagen.startsWith('http')
-                        ? Image.network(
-                            imagen,
-                            fit: BoxFit.cover,
-                            errorBuilder: (context, error, stackTrace) {
-                              return const Icon(Icons.hotel, size: 40, color: Colors.grey);
-                            },
-                          )
-                        : Image.asset(
-                            imagen,
-                            fit: BoxFit.cover,
-                            errorBuilder: (context, error, stackTrace) {
-                              return const Icon(Icons.hotel, size: 40, color: Colors.grey);
-                            },
-                          ))
-                    : const Icon(Icons.hotel, size: 40, color: Colors.grey),
-              ),
-            ),
+           _buildRoomImage(imagenBase64),
             const SizedBox(width: 12),
             Expanded(
               child: Column(
@@ -367,6 +342,57 @@ Widget _buildRoomListItem(Map<String, dynamic> room) {
       ),
     );
   }
+  // 🆕 Método para construir la imagen desde base64
+Widget _buildRoomImage(String? imagenBase64) {
+  // Si no hay imagen o es "vacio"
+  if (imagenBase64 == null || imagenBase64.isEmpty || imagenBase64 == 'vacio') {
+    return Container(
+      width: 70,
+      height: 70,
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(8),
+        color: Colors.grey[300],
+      ),
+      child: const Icon(Icons.hotel, size: 40, color: Colors.grey),
+    );
+  }
+
+  // Intentar decodificar la imagen
+  try {
+    Uint8List bytes = base64Decode(imagenBase64);
+    return Container(
+      width: 70,
+      height: 70,
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(8),
+        child: Image.memory(
+          bytes,
+          fit: BoxFit.cover,
+          errorBuilder: (context, error, stackTrace) {
+            return Container(
+              color: Colors.grey[300],
+              child: const Icon(Icons.hotel, size: 40, color: Colors.grey),
+            );
+          },
+        ),
+      ),
+    );
+  } catch (e) {
+    print('❌ Error al decodificar imagen de habitación: $e');
+    return Container(
+      width: 70,
+      height: 70,
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(8),
+        color: Colors.grey[300],
+      ),
+      child: const Icon(Icons.hotel, size: 40, color: Colors.grey),
+    );
+  }
+}
   void _mostrarDetalleHabitacion(Map<String, dynamic> habitacion) {
     // Navegar a la pantalla de detalle de habitación usando rutas con argumentos
     if (mounted) {
