@@ -184,4 +184,108 @@ class ReservaHandler {
       );
     }
   }
+  // 3. OBTENER RESERVAS POR USUARIO
+Future<Response> getReservasByUsuario(Request request) async {
+  try {
+    final parts = request.url.pathSegments;
+    if (parts.length < 3) {
+      return Response.badRequest(
+        body: jsonEncode({'success': false, 'message': 'ID de usuario faltante'}),
+        headers: {'Content-Type': 'application/json'},
+      );
+    }
+    final idUsuario = parts.last; // Obtener el último segmento de la URL
+
+    final reservas = await mongoService.findReservasByUsuario(idUsuario);
+
+    final reservasTransformadas = await Future.wait(reservas.map((reserva) async {
+      final int idHabitacion = reserva['idHabitacion'] as int;
+      final habitacion = await mongoService.findHabitacionById(idHabitacion);
+      
+      return {
+        'idReserva': reserva['idReserva'] ?? reserva['_id'].toString(),
+        'idUsuario': reserva['idUsuario'],
+        'idHabitacion': idHabitacion,
+        'fechaCheckIn': reserva['fechaCheckIn'],
+        'fechaCheckOut': reserva['fechaCheckOut'],
+        'diasEstadia': reserva['diasEstadia'] ?? 0,
+        'precioTotal': reserva['precioTotal'],
+        'estado': reserva['estado'] ?? 'Confirmada',
+        'fechaReserva': reserva['fechaReserva'],
+        'habitacion': habitacion != null ? {
+          'nombre': habitacion['NombreHab'],
+          'descripcion': habitacion['Descripcion'],
+          'imagen': habitacion['ImagenUrl'],
+          'servicios': habitacion['ServiciosAdicional'] ?? [],
+        } : null,
+      };
+    }));
+
+    return Response.ok(
+      jsonEncode({'success': true, 'reservas': reservasTransformadas}),
+      headers: {'Content-Type': 'application/json'},
+    );
+  } catch (e) {
+    print('💥 Error: $e');
+    return Response.internalServerError(
+      body: jsonEncode({'success': false, 'message': 'Error: ${e.toString()}'}),
+      headers: {'Content-Type': 'application/json'},
+    );
+  }
+}
+  // 4. OBTENER TODAS LAS RESERVAS
+  Future<Response> getAllReservas(Request request) async {
+    try {
+      final reservas = await mongoService.getAllReservas();
+
+      return Response.ok(
+        jsonEncode({
+          'success': true,
+          'count': reservas.length,
+          'reservas': reservas
+        }),
+        headers: {'Content-Type': 'application/json'},
+      );
+    } catch (e) {
+      print('💥 Error: $e');
+      return Response.internalServerError(
+        body: jsonEncode({'success': false, 'message': 'Error: ${e.toString()}'}),
+        headers: {'Content-Type': 'application/json'},
+      );
+    }
+  }
+
+  // 5. CANCELAR RESERVA
+Future<Response> cancelarReserva(Request request) async {
+  try {
+    final parts = request.url.pathSegments;
+    if (parts.length < 2) {
+      return Response.badRequest(
+        body: jsonEncode({'success': false, 'message': 'ID de reserva faltante'}),
+        headers: {'Content-Type': 'application/json'},
+      );
+    }
+    final id = parts[parts.length - 2]; // Penúltimo segmento (antes de "cancelar")
+
+    final success = await mongoService.cancelarReserva(id);
+
+    if (success) {
+      return Response.ok(
+        jsonEncode({'success': true, 'message': 'Reserva cancelada'}),
+        headers: {'Content-Type': 'application/json'},
+      );
+    } else {
+      return Response.notFound(
+        jsonEncode({'success': false, 'message': 'Reserva no encontrada'}),
+        headers: {'Content-Type': 'application/json'},
+      );
+    }
+  } catch (e) {
+    print('💥 Error: $e');
+    return Response.internalServerError(
+      body: jsonEncode({'success': false, 'message': 'Error: ${e.toString()}'}),
+      headers: {'Content-Type': 'application/json'},
+    );
+  }
+}
 }

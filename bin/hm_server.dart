@@ -64,6 +64,13 @@ void main() async {
  // Rutas de Reservas
   appRouter.post('/api/reservas', reservaHandler.crearReserva);
   appRouter.get('/api/reservas/habitacion/<idHabitacion>', reservaHandler.getReservasByHabitacion);
+  // Obtener reservas de un usuario
+  appRouter.get('/api/reservas/usuario/<idUsuario>', reservaHandler.getReservasByUsuario);
+  // Obtener todas las reservas (opcional - para admin)
+  appRouter.get('/api/reservas', reservaHandler.getAllReservas);
+  
+  // Cancelar reserva
+  appRouter.put('/api/reservas/<id>/cancelar', reservaHandler.cancelarReserva);
   
 
   // Endpoint para obtener usuarios (para pruebas)

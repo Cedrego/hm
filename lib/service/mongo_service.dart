@@ -278,5 +278,114 @@ class MongoService {
     // Asume que idHabitacion se guarda como entero en la colección 'reservas'
     return await collection.find(where.eq('idHabitacion', idInt)).toList();
   }
-  
+  // ✨ Obtener el siguiente idReserva
+Future<int> getNextIdReserva() async {
+  try {
+    print('🔢 Obteniendo siguiente idReserva...');
+    final collection = db.collection('reservas');
+    
+    final ultimaReserva = await collection
+        .find(where.sortBy('idReserva', descending: true).limit(1))
+        .toList();
+    
+    if (ultimaReserva.isEmpty) {
+      print('📌 Primera reserva, asignando ID: 1');
+      return 1;
+    }
+    
+    final ultimoId = ultimaReserva[0]['idReserva'] as int? ?? 0;
+    final nuevoId = ultimoId + 1;
+    
+    print('✅ Siguiente idReserva: $nuevoId');
+    return nuevoId;
+  } catch (e) {
+    print('❌ Error al obtener siguiente idReserva: $e');
+    return 1;
+  }
+}
+// 📋 Buscar reservas por usuario
+Future<List<Map<String, dynamic>>> findReservasByUsuario(String idUsuario) async {
+  try {
+    print('🔍 Buscando reservas del usuario: $idUsuario');
+    final collection = db.collection('reservas');
+    
+    final reservas = await collection
+        .find(where.eq('idUsuario', idUsuario).sortBy('fechaReserva', descending: true))
+        .toList();
+    
+    print('✅ Encontradas ${reservas.length} reservas para el usuario');
+    return reservas;
+  } catch (e) {
+    print('❌ Error al buscar reservas del usuario: $e');
+    return [];
+  }
+}
+
+// 🔄 Actualizar estado de reserva
+Future<bool> updateReservaEstado(String id, String nuevoEstado) async {
+  try {
+    print('📝 Actualizando estado de reserva ID: $id a $nuevoEstado');
+    final collection = db.collection('reservas');
+    
+    final result = await collection.updateOne(
+      where.id(ObjectId.fromHexString(id)),
+      modify.set('Estado', nuevoEstado)
+            .set('FechaActualizacion', DateTime.now().toIso8601String()),
+    );
+    
+    final success = result.isSuccess && result.nModified > 0;
+    
+    if (success) {
+      print('✅ Estado de reserva actualizado exitosamente');
+    } else {
+      print('⚠️ No se modificó ninguna reserva');
+    }
+    
+    return success;
+  } catch (e) {
+    print('❌ Error al actualizar estado de reserva: $e');
+    return false;
+  }
+}
+
+// 🗑️ Cancelar reserva
+Future<bool> cancelarReserva(String id) async {
+  return await updateReservaEstado(id, 'Cancelada');
+}
+// 📋 Obtener todas las reservas
+Future<List<Map<String, dynamic>>> getAllReservas() async {
+  try {
+    print('🏨 Obteniendo todas las reservas...');
+    final collection = db.collection('reservas');
+    final reservas = await collection
+        .find(where.sortBy('fechaReserva', descending: true))
+        .toList();
+    
+    print('✅ Encontradas ${reservas.length} reservas');
+    return reservas;
+  } catch (e) {
+    print('❌ Error al obtener reservas: $e');
+    return [];
+  }
+}
+
+// 🔍 Buscar reserva por idReserva numérico
+Future<Map<String, dynamic>?> findReservaById(int idReserva) async {
+  try {
+    print('🔍 Buscando reserva por idReserva: $idReserva');
+    final collection = db.collection('reservas');
+    final reserva = await collection.findOne(where.eq('idReserva', idReserva));
+    
+    if (reserva != null) {
+      print('✅ Reserva encontrada');
+    } else {
+      print('⚠️ No se encontró reserva con idReserva: $idReserva');
+    }
+    
+    return reserva;
+  } catch (e) {
+    print('❌ Error al buscar reserva por ID: $e');
+    return null;
+  }
+}
 }
