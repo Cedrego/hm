@@ -48,6 +48,7 @@ class _MainPageState extends State<MainPage> {
       final String roomListRoute = AppRoutes.roomListScreen;
       final String roomCreationRoute = AppRoutes.roomCreationScreen;
       final String reservationsRoute = '/reservas';
+      final String MisreservationsRoute = AppRoutes.misReservas;
       final String profileRoute = AppRoutes.profileScreen;
       final String informationRoute = '/informacion';
       final bool isAdmin = _userData?['rol'] == 'admin';
@@ -122,7 +123,8 @@ class _MainPageState extends State<MainPage> {
                                           title: 'Reservas',
                                           color: Colors.green,
                                           onTap: () {
-                                             Navigator.pushNamed(context, reservationsRoute);
+                                             // O si usas rutas nombradas:
+                                              Navigator.pushNamed(context, MisreservationsRoute);
                                           },
                                        ),
                                        _buildFeatureCard(

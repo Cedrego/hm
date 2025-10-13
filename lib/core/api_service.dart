@@ -124,4 +124,42 @@ class ApiService {
       throw Exception('Error de conexión: $e');
     }
   }
+// Obtener reservas de una habitación
+static Future<List<dynamic>> getReservasPorHabitacion(String habitacionId) async {
+  try {
+    final response = await http.get(
+      Uri.parse('$baseUrl/reservas/habitacion/$habitacionId'),
+      headers: {'Content-Type': 'application/json'},
+    );
+
+    final responseData = jsonDecode(response.body);
+
+    if (response.statusCode == 200) {
+      return responseData['reservas'] ?? [];
+    } else {
+      throw Exception('Error al obtener reservas');
+    }
+  } catch (e) {
+    throw Exception('Error de conexión: $e');
+  }
+}
+// Obtener reservas de un usuario
+static Future<List<dynamic>> getReservasUsuario(String usuarioId) async {
+  try {
+    final response = await http.get(
+      Uri.parse('$baseUrl/reservas/usuario/$usuarioId'),
+      headers: {'Content-Type': 'application/json'},
+    );
+
+    final responseData = jsonDecode(response.body);
+
+    if (response.statusCode == 200) {
+      return responseData['reservas'] ?? [];
+    } else {
+      throw Exception('Error al obtener reservas del usuario');
+    }
+  } catch (e) {
+    throw Exception('Error de conexión: $e');
+  }
+}
 }
