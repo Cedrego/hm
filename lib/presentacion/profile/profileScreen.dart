@@ -15,7 +15,7 @@ class ProfileScreen extends StatelessWidget {
 
   // Método para construir el avatar con la imagen
   Widget _buildAvatar() {
-    final String? imagenBase64 = userData?['imagen'];
+    final String? imagenBase64 = userData ['imagen'];
     
     // Si no hay imagen o es "vacio"
     if (imagenBase64 == null || 

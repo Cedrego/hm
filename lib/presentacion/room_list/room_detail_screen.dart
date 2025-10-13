@@ -5,6 +5,7 @@ import '../../core/auth_service.dart'; // Importar AuthService
 import '../custom_app_bar.dart'; // Importar CustomAppBar
 import '../app_drawer.dart'; // Importar AppDrawer
 import '../../core/app_export.dart'; // Para AppRoutes
+import 'package:intl/intl.dart'; // Para formato de moneda
 
 class RoomDetailScreen extends StatefulWidget {
   final Map<String, dynamic> room;
@@ -23,6 +24,8 @@ class _RoomDetailScreenState extends State<RoomDetailScreen> {
   bool _isLoadingUserData = true;
   Map<String, dynamic>? _userData;
   bool get _isAdmin => _userData?['rol'] == 'admin';
+  final currencyFormatter = NumberFormat.currency(locale: 'es_ES', symbol: '\$', decimalDigits: 2);
+
 
   @override
   void initState() {
@@ -43,272 +46,197 @@ class _RoomDetailScreenState extends State<RoomDetailScreen> {
       setState(() {
         _isLoadingUserData = false;
       });
-    }
-  }
-
-  Future<void> _onLogoutPressed(BuildContext context) async {
-    // Lógica completa de confirmación de cierre de sesión
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Confirmación'),
-        content: const Text('¿Está seguro de cerrar sesión?'),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Cancelar')),
-          TextButton(
-            onPressed: () => Navigator.pop(context, true),
-            style: TextButton.styleFrom(foregroundColor: Colors.red),
-            child: const Text('Cerrar sesión'),
-          ),
-        ],
-      ),
-    );
-
-    if (confirmed == true) {
-      await AuthService.logout();
-      if (mounted) { 
-        Navigator.pushNamedAndRemoveUntil(
-          context,
-          AppRoutes.loginScreen,
-          (route) => false,
-        );
-      }
+      // Manejar error de carga de datos de usuario si es necesario
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    if (_isLoadingUserData) {
-      return const Scaffold(body: Center(child: CircularProgressIndicator()));
-    }
-    
     // Extraer datos de la habitación
     final room = widget.room;
-    final String nombre = room['NombreHab'] ?? 'Habitación';
-    final String descripcion = room['Descripcion'] ?? 'Sin descripción';
-    final String imagen = room['ImagenUrl'] ?? '';
-    final dynamic precioDia = room['PrecioDia'] ?? 0;
+    final String nombre = room['nombre'] ?? 'Habitación';
+    final String descripcion = room['descripcion'] ?? 'Sin descripción';
+    final String imagen = room['imagenUrl'] ?? '';
+    final dynamic precioDia = room['precio'] ?? 0;
     final double precio = (precioDia is int) ? precioDia.toDouble() : (precioDia as double? ?? 0.0);
-    final List<dynamic> serviciosAdicionales = room['ServiciosAdicional'] ?? [];
-    final int idHabitacion = room['idHabitacion'] ?? 0;
+    final List<dynamic> serviciosAdicionales = room['servicios'] ?? [];
+    final String idHabitacion = room['id'] ?? '';
 
+    // Manejar el cierre de sesión desde el CustomAppBar
+    void onLogoutPressed(BuildContext context) {
+      AuthService.logout();
+      Navigator.pushNamedAndRemoveUntil(context, AppRoutes.loginScreen, (route) => false);
+    }
+    
+    // Mostrar un indicador de carga si los datos del usuario no están listos
+    if (_isLoadingUserData) {
+      return const Scaffold(
+        body: Center(child: CircularProgressIndicator()),
+      );
+    }
 
     return Scaffold(
-      key: _scaffoldKey, // Asignar la key al Scaffold
-      backgroundColor: Colors.grey[100],
-      
-      // 1. Usar CustomAppBar para el menú funcional
+      key: _scaffoldKey,
+      backgroundColor: Colors.white,
       appBar: CustomAppBar(
         scaffoldKey: _scaffoldKey,
-        onLogoutPressed: () => _onLogoutPressed(context),
+        onLogoutPressed: () => onLogoutPressed(context),
         userData: _userData,
         isAdmin: _isAdmin,
       ),
-      
-      // 2. Usar AppDrawer para el menú lateral
       drawer: AppDrawer(
         userData: _userData,
         isAdmin: _isAdmin,
-        onLogoutPressed: _onLogoutPressed,
+        onLogoutPressed: onLogoutPressed,
       ),
-      
       body: Stack(
         children: [
-          SingleChildScrollView(
-            // ... (resto del cuerpo de la pantalla de detalle)
-            padding: const EdgeInsets.only(bottom: 100), // Espacio para el botón fijo
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                // Sección de Imagen
-                if (imagen.isNotEmpty)
-                  ClipRRect(
-                    borderRadius: const BorderRadius.vertical(bottom: Radius.circular(20)),
-                    child: Image.network(
-                      imagen,
-                      width: double.infinity,
-                      height: 250,
-                      fit: BoxFit.cover,
-                      errorBuilder: (context, error, stackTrace) {
-                        return Container(
-                          width: double.infinity,
-                          height: 250,
-                          color: Colors.grey[300],
-                          child: const Icon(Icons.hotel, size: 80, color: Colors.grey),
-                        );
-                      },
-                    ),
-                  ),
-                
-                Padding(
-                  padding: const EdgeInsets.all(20.0),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Expanded(
-                            child: Text(
-                              nombre,
-                              style: const TextStyle(fontSize: 28, fontWeight: FontWeight.bold, color: Color(0xFF00897B)),
-                            ),
-                          ),
-                          Text(
-                            '\$${precio.toStringAsFixed(2)}/noche',
-                            style: const TextStyle(
-                              fontSize: 22,
-                              fontWeight: FontWeight.w900,
-                              color: Color(0xFF00897B),
-                            ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 16),
-                      
-                      // Botón para ver reservas (Solo visible para administradores)
-                      if (_isAdmin)
-                        Padding(
-                          padding: const EdgeInsets.only(bottom: 16.0),
-                          child: SizedBox(
-                            width: double.infinity,
-                            child: OutlinedButton.icon(
-                              icon: const Icon(Icons.list_alt, color: Color(0xFF00897B)),
-                              label: const Text('Ver Reservas de Habitación', style: TextStyle(color: Color(0xFF00897B))),
-                              onPressed: () {
-                                Navigator.push(
-                                  context,
-                                  MaterialPageRoute(
-                                    // Pasa la habitación, incluyendo el ID
-                                    builder: (context) => ReservationListScreen(room: widget.room), 
-                                  ),
-                                );
-                              },
-                              style: OutlinedButton.styleFrom(
-                                side: const BorderSide(color: Color(0xFF00897B)),
-                                padding: const EdgeInsets.symmetric(vertical: 14),
-                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                              ),
-                            ),
-                          ),
-                        ),
+          ListView(
+            padding: EdgeInsets.zero,
+            children: [
+              // 1. Imagen Principal
+              _buildImageSection(imagen),
 
-                      const Text(
-                        'Descripción',
-                        style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-                      ),
-                      const SizedBox(height: 8),
-                      Text(
-                        descripcion,
-                        style: TextStyle(fontSize: 16, color: Colors.grey[700], height: 1.5),
-                      ),
-                      const SizedBox(height: 20),
-
-                      if (serviciosAdicionales.isNotEmpty) ...[
-                        const Text(
-                          'Servicios Incluidos',
-                          style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-                        ),
-                        const SizedBox(height: 12),
-                        Wrap(
-                          spacing: 10,
-                          runSpacing: 10,
-                          children: serviciosAdicionales.map((servicio) {
-                            return _buildServiceChip(servicio.toString());
-                          }).toList(),
-                        ),
-                      ],
-                    ],
-                  ),
-                ),
-              ],
-            ),
-          ),
-          
-          // Barra de navegación inferior (Botones de acción)
-          Align(
-            alignment: Alignment.bottomCenter,
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withOpacity(0.1),
-                    blurRadius: 10,
-                    offset: const Offset(0, -5),
-                  ),
-                ],
-              ),
-              child: SafeArea(
-                child: Row(
+              // 2. Contenido Principal
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    // Botón Anterior
-                    Expanded(
-                      child: ElevatedButton(
-                        onPressed: () {
-                          // Navegar a la pantalla de formulario de reserva
-                           Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (_) => ReservationFormScreen(room: widget.room),
-                              ),
-                            );
-                        },
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: const Color(0xFF00897B),
-                          foregroundColor: Colors.white,
-                          padding: const EdgeInsets.symmetric(vertical: 14),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                        ),
-                        child: const Text(
-                          'Reservar',
-                          style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-                        ),
-                      ),
-                    ),
+                    // Nombre y Precio
+                    _buildNameAndPrice(nombre, precio),
+                    const SizedBox(height: 16),
                     
-                    const SizedBox(width: 12),
-                    
-                    // Botón Siguiente (puede ser otro botón si no hay navegación secuencial)
-                    Expanded(
-                      child: ElevatedButton(
-                        onPressed: () {
-                          // Simulación de acción secundaria o navegación (ej: Compartir)
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(
-                              content: Text('Función de Compartir (o Siguiente)'),
-                              duration: Duration(seconds: 2),
-                            ),
-                          );
-                        },
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.grey[700],
-                          foregroundColor: Colors.white,
-                          padding: const EdgeInsets.symmetric(vertical: 14),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                        ),
-                        child: const Text(
-                          'Compartir',
-                          style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-                        ),
-                      ),
+                    // Descripción
+                    const Text(
+                      'Descripción',
+                      style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Color(0xFF333333)),
                     ),
+                    const SizedBox(height: 8),
+                    Text(
+                      descripcion,
+                      style: const TextStyle(fontSize: 16, height: 1.5, color: Color(0xFF555555)),
+                    ),
+                    const SizedBox(height: 20),
+
+                    // Servicios
+                    const Text(
+                      'Servicios Incluidos',
+                      style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Color(0xFF333333)),
+                    ),
+                    const SizedBox(height: 10),
+                    _buildServicesChips(serviciosAdicionales),
+                    const SizedBox(height: 80), // Espacio para el Fixed Bottom Bar
                   ],
                 ),
               ),
-            ),
+            ],
           ),
+          
+          // 3. Barra de Botones Inferior Fija
+          _buildBottomButtonBar(context, idHabitacion, room),
         ],
       ),
     );
   }
 
+  // Helper para la sección de la imagen
+  Widget _buildImageSection(String imagenUrl) {
+    return Container(
+      height: 250,
+      decoration: BoxDecoration(
+        color: Colors.grey.shade200,
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.1),
+            blurRadius: 10,
+            offset: const Offset(0, 5),
+          ),
+        ],
+      ),
+      child: Image.network(
+        imagenUrl,
+        fit: BoxFit.cover,
+        errorBuilder: (context, error, stackTrace) => Center(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(Icons.image_not_supported, size: 50, color: Colors.grey.shade400),
+              const Text('Imagen no disponible', style: TextStyle(color: Color(0xFF555555))),
+            ],
+          ),
+        ),
+        loadingBuilder: (context, child, loadingProgress) {
+          if (loadingProgress == null) return child;
+          return Center(
+            child: CircularProgressIndicator(
+              value: loadingProgress.expectedTotalBytes != null
+                  ? loadingProgress.cumulativeBytesLoaded / loadingProgress.expectedTotalBytes!
+                  : null,
+              color: const Color(0xFF00897B),
+            ),
+          );
+        },
+      ),
+    );
+  }
+
+  // Helper para nombre y precio
+  Widget _buildNameAndPrice(String nombre, double precio) {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Expanded(
+          child: Text(
+            nombre,
+            style: const TextStyle(
+              fontSize: 28,
+              fontWeight: FontWeight.w900,
+              color: Color(0xFF00897B),
+            ),
+          ),
+        ),
+        const SizedBox(width: 10),
+        Column(
+          crossAxisAlignment: CrossAxisAlignment.end,
+          children: [
+            Text(
+              currencyFormatter.format(precio),
+              style: const TextStyle(
+                fontSize: 24,
+                fontWeight: FontWeight.bold,
+                color: Colors.redAccent,
+              ),
+            ),
+            const Text(
+              '/ Noche',
+              style: TextStyle(
+                fontSize: 14,
+                color: Color(0xFF555555),
+              ),
+            ),
+          ],
+        ),
+      ],
+    );
+  }
+
   // Helper para mostrar los servicios como chips (reutilizado de room_list_screen)
+  Widget _buildServicesChips(List<dynamic> serviciosAdicionales) {
+    if (serviciosAdicionales.isEmpty) {
+      return const Text('No se especificaron servicios adicionales.');
+    }
+    return Wrap(
+      spacing: 8.0,
+      runSpacing: 8.0,
+      children: serviciosAdicionales.map((servicio) {
+        return _buildServiceChip(servicio.toString());
+      }).toList(),
+    );
+  }
+
+  // Helper para el chip de servicio
   Widget _buildServiceChip(String servicio) {
     final servicioLower = servicio.toLowerCase();
     IconData icon;
@@ -341,13 +269,93 @@ class _RoomDetailScreenState extends State<RoomDetailScreen> {
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(icon, size: 16, color: color),
+          Icon(icon, size: 18, color: color),
           const SizedBox(width: 6),
           Text(
             servicio,
-            style: TextStyle(fontSize: 14, color: color, fontWeight: FontWeight.w500),
+            style: TextStyle(fontSize: 14, color: color, fontWeight: FontWeight.w600),
           ),
         ],
+      ),
+    );
+  }
+
+  // Helper para la barra de botones inferior fija
+  Widget _buildBottomButtonBar(BuildContext context, String idHabitacion, Map<String, dynamic> room) {
+    return Positioned(
+      bottom: 0,
+      left: 0,
+      right: 0,
+      child: Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.1),
+              blurRadius: 10,
+              offset: const Offset(0, -5),
+            ),
+          ],
+        ),
+        child: Row(
+          children: [
+            // Botón Ver Reservas (Solo para Admin)
+            if (_isAdmin)
+              Expanded(
+                child: ElevatedButton.icon(
+                  onPressed: () {
+                    Navigator.pushNamed(
+                      context,
+                      AppRoutes.reservationListScreen,
+                      arguments: room,
+                    );
+                  },
+                  icon: const Icon(Icons.list_alt, color: Colors.white),
+                  label: const Text(
+                    'Ver Reservas',
+                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                  ),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFF333333),
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(vertical: 14),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                  ),
+                ),
+              ),
+            
+            if (_isAdmin) const SizedBox(width: 12),
+
+            // Botón Reservar Ahora (Para todos los usuarios)
+            Expanded(
+              child: ElevatedButton.icon(
+                onPressed: () {
+                   Navigator.pushNamed(
+                    context,
+                    AppRoutes.reservationFormScreen,
+                    arguments: room,
+                  );
+                },
+                icon: const Icon(Icons.calendar_month, color: Colors.white),
+                label: const Text(
+                  'Reservar Ahora',
+                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                ),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFF00897B),
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(vertical: 14),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
