@@ -8,6 +8,7 @@ import 'package:hm_server/config/config.dart';
 import 'package:hm_server/handlers/login_handler.dart';
 import 'package:hm_server/handlers/registro_handler.dart';
 import 'package:hm_server/handlers/habitacion_handler.dart';
+import 'package:hm_server/handlers/reserva_handler.dart';
 
 void main() async {
   // Conectar a MongoDB
@@ -18,6 +19,7 @@ void main() async {
   final loginHandler = LoginHandler(mongoService);
   final registroHandler = RegistroHandler(mongoService);
   final habitacionHandler = HabitacionHandler(mongoService);
+  final reservaHandler = ReservaHandler(mongoService);
 
   // Configuración de las rutas (endpoints)
   final appRouter = Router();
@@ -58,6 +60,11 @@ void main() async {
 
   appRouter.post('/api/habitaciones', habitacionHandler.crearHabitacion);
   appRouter.get('/api/habitaciones', habitacionHandler.getHabitaciones);
+
+ // Rutas de Reservas
+  appRouter.post('/api/reservas', reservaHandler.crearReserva);
+  appRouter.get('/api/reservas/habitacion/<idHabitacion>', reservaHandler.getReservasByHabitacion);
+  
 
   // Endpoint para obtener usuarios (para pruebas)
   appRouter.get('/api/usuarios', (Request request) async {
@@ -107,5 +114,7 @@ void main() async {
   print('  POST /api/registro');
   print('  GET  /api/usuarios');
   print('  GET  /api/perfil/<id>');
+  print('  POST /api/reservas');
+  print('  GET  /api/reservas/habitacion/<idHabitacion>');
   print('═══════════════════════════════════════════════════');
 }

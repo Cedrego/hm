@@ -51,13 +51,13 @@ class HabitacionHandler {
         'Descripcion': data['descripcion'].toString().trim(),
         'ServicioAdicional': data['servicios'] ?? [],
         'PrecioDia': data['precio'],
-        'ImagenId': data['imagenUrl'],
+        'imagen': data['imagen'] ?? 'vacio',
         'fechaCreacion': DateTime.now().toIso8601String(),
         'disponible': true,
       };
 
       print('🏨 Creando habitación: ${habitacionData['NombreHab']}');
-
+     print('🖼️ Imagen base64 length: ${habitacionData['imagen']?.toString().length ?? 0}'); // DEBUG
       // Crear habitación
       final habitacion = await mongoService.createHabitacion(habitacionData);
 
@@ -71,7 +71,7 @@ class HabitacionHandler {
             'descripcion': habitacion['Descripcion'],
             'precio': habitacion['PrecioDia'],
             'servicios': habitacion['ServicioAdicional'],
-            'imagenUrl': habitacion['ImagenId'],
+            'imagen': habitacion['imagen'],
           },
         }),
         headers: {'Content-Type': 'application/json'},
@@ -102,7 +102,7 @@ class HabitacionHandler {
           'descripcion': hab['Descripcion'],
           'precio': hab['PrecioDia'],
           'servicios': hab['ServicioAdicional'],
-          'imagenUrl': hab['ImagenId'],
+          'imagen': hab['imagen'] ?? 'vacio',
           'disponible': hab['disponible'] ?? true,
           'fechaCreacion': hab['fechaCreacion'],
         };

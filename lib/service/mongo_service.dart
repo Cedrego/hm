@@ -262,4 +262,21 @@ class MongoService {
       return 0;
     }
   }
+
+  // Crear nueva reserva
+  Future<Map<String, dynamic>> createReserva(Map<String, dynamic> reserva) async {
+    final collection = db.collection('reservas');
+    await collection.insert(reserva);
+    print('Reserva creada para habitación ID: ${reserva['idHabitacion']}');
+    return reserva;
+  }
+  
+  // Obtener reservas por ID de habitación (Integer)
+  Future<List<Map<String, dynamic>>> findReservasByHabitacion(String idHabitacion) async {
+    final collection = db.collection('reservas');
+    final idInt = int.tryParse(idHabitacion) ?? 0;
+    // Asume que idHabitacion se guarda como entero en la colección 'reservas'
+    return await collection.find(where.eq('idHabitacion', idInt)).toList();
+  }
+  
 }
