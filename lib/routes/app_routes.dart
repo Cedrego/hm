@@ -4,10 +4,9 @@ import '../presentacion/registration_screen/registration_screen.dart';
 import '../presentacion/login_screen/login_screen.dart';
 import '../presentacion/room_creation_screen/room_creation_screen.dart';
 import '../presentacion/app_navigation_screen/app_navigation_screen.dart';
-
-import '../presentacion/create_reserve/room_list_screen.dart';
-import '../presentacion/create_reserve/room_detail_screen.dart';
-import '../presentacion/create_reserve/room_models.dart';
+import '../presentacion/profile/profileScreen.dart';
+import '../presentacion/room_list/room_list_screen.dart';
+import '../presentacion/room_list/room_detail_screen.dart';
 
 class AppRoutes {
   static const String registrationScreen = '/registration_screen';
@@ -16,7 +15,7 @@ class AppRoutes {
   static const String appNavigationScreen = '/app_navigation_screen';
   static const String initialRoute = '/login_screen';
   static const String roomCreationScreen = '/room_creation_screen';
-
+  static const String profileScreen = '/profile';
   static const String roomListScreen = '/room_list_screen';
   static const String roomDetailScreen = '/room_detail_screen';
 
@@ -26,11 +25,13 @@ class AppRoutes {
     roomCreationScreen: (context) => RoomCreationScreen(),
     mainPage: (context) => MainPage(),
     appNavigationScreen: (context) => AppNavigationScreen(),
- 
+    profileScreen: (context) {
+      final userData = ModalRoute.of(context)!.settings.arguments as Map<String, dynamic>? ?? {};
+      return ProfileScreen(userData: userData);
+    },
     roomListScreen: (context) => const RoomListScreen(),
     roomDetailScreen: (context) {
-      final settings = ModalRoute.of(context)!.settings;
-      final room = settings.arguments as Room; 
+      final Map<String, dynamic> room = ModalRoute.of(context)!.settings.arguments as Map<String, dynamic>;
       return RoomDetailScreen(room: room);
     },
   };

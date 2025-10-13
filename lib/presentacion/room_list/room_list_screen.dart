@@ -1,16 +1,25 @@
 import 'package:flutter/material.dart';
 import '../../core/api_service.dart';
+import '../../core/auth_service.dart'; 
+import '../custom_app_bar.dart'; 
+import '../app_drawer.dart'; 
+import '../../core/app_export.dart'; // Para AppRoutes
 
 class RoomListScreen extends StatefulWidget {
-  final Map<String, dynamic>? user;
-
-  const RoomListScreen({this.user, super.key});
+  // 🟢 Eliminado el parámetro 'user' ya que se carga con AuthService.
+  const RoomListScreen({super.key}); 
 
   @override
   State<RoomListScreen> createState() => _RoomListScreenState();
 }
 
 class _RoomListScreenState extends State<RoomListScreen> {
+  final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
+  
+  bool _isLoadingUserData = true;
+  Map<String, dynamic>? _userData;
+  bool get _isAdmin => _userData?['rol'] == 'admin';
+
   List<dynamic> habitaciones = [];
   bool isLoading = true;
   String errorMessage = '';
@@ -18,7 +27,24 @@ class _RoomListScreenState extends State<RoomListScreen> {
   @override
   void initState() {
     super.initState();
+    _loadUserData();
     _cargarHabitaciones();
+  }
+  
+  Future<void> _loadUserData() async {
+    try {
+      final userData = await AuthService.getUserData();
+      if (!mounted) return;
+      setState(() {
+        _userData = userData;
+        _isLoadingUserData = false;
+      });
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _isLoadingUserData = false;
+      });
+    }
   }
 
   Future<void> _cargarHabitaciones() async {
@@ -28,59 +54,86 @@ class _RoomListScreenState extends State<RoomListScreen> {
     });
 
     try {
-      print('🔄 Cargando habitaciones desde la API...');
       final data = await ApiService.getHabitaciones();
       
+      if (!mounted) return;
       setState(() {
         habitaciones = data;
         isLoading = false;
       });
-      
-      print('✅ ${habitaciones.length} habitaciones cargadas');
     } catch (e) {
-      print('❌ Error al cargar habitaciones: $e');
+      if (!mounted) return;
       setState(() {
         errorMessage = 'Error al cargar habitaciones: $e';
         isLoading = false;
       });
     }
   }
+  
+  Future<void> _onLogoutPressed(BuildContext context) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Confirmación'),
+        content: const Text('¿Está seguro de cerrar sesión?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancelar'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            style: TextButton.styleFrom(foregroundColor: Colors.red),
+            child: const Text('Cerrar sesión'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed == true) {
+      await AuthService.logout();
+      if (mounted) { 
+        Navigator.pushNamedAndRemoveUntil(
+          context,
+          AppRoutes.loginScreen,
+          (route) => false,
+        );
+      }
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
+    if (_isLoadingUserData) {
+      return const Scaffold(body: Center(child: CircularProgressIndicator()));
+    }
+    
     return Scaffold(
+      key: _scaffoldKey, // 🟢 Asignar la key al Scaffold
       backgroundColor: Colors.grey[100],
-      appBar: AppBar(
-        backgroundColor: const Color(0xFF00897B),
-        title: const Text(
-          'Habitaciones Disponibles',
-          style: TextStyle(color: Colors.white),
-        ),
-        centerTitle: true,
-        leading: IconButton(
-          icon: const Icon(Icons.menu, color: Colors.white),
-          onPressed: () {},
-        ),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.search, color: Colors.white),
-            onPressed: () {},
-          ),
-          if (widget.user != null)
-            IconButton(
-              icon: const Icon(Icons.person, color: Colors.white),
-              onPressed: () {},
-            ),
-        ],
+      
+      // 🟢 USANDO CUSTOMAPPBAR 🟢
+      appBar: CustomAppBar(
+        scaffoldKey: _scaffoldKey,
+        onLogoutPressed: () => _onLogoutPressed(context),
+        userData: _userData,
+        isAdmin: _isAdmin,
       ),
+      
+      // 🟢 USANDO APPDRAWER 🟢
+      drawer: AppDrawer(
+        userData: _userData,
+        isAdmin: _isAdmin,
+        onLogoutPressed: _onLogoutPressed,
+      ),
+      
+      // La lógica del cuerpo se mantiene igual.
       body: RefreshIndicator(
         onRefresh: _cargarHabitaciones,
         color: const Color(0xFF00897B),
         child: isLoading
             ? const Center(
-                child: CircularProgressIndicator(
-                  color: Color(0xFF00897B),
-                ),
+                child: CircularProgressIndicator(color: Color(0xFF00897B)),
               )
             : errorMessage.isNotEmpty
                 ? Center(
@@ -91,11 +144,7 @@ class _RoomListScreenState extends State<RoomListScreen> {
                         const SizedBox(height: 16),
                         Text(
                           'Error al cargar habitaciones',
-                          style: TextStyle(
-                            fontSize: 18,
-                            fontWeight: FontWeight.bold,
-                            color: Colors.grey[700],
-                          ),
+                          style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.grey[700]),
                         ),
                         const SizedBox(height: 8),
                         Padding(
@@ -148,8 +197,7 @@ class _RoomListScreenState extends State<RoomListScreen> {
                         padding: const EdgeInsets.symmetric(vertical: 8),
                         itemCount: habitaciones.length,
                         itemBuilder: (context, index) {
-                          final habitacion = habitaciones[index];
-                          return _buildRoomListItem(habitacion);
+                          return _buildRoomListItem(habitaciones[index] as Map<String, dynamic>);
                         },
                       ),
       ),
@@ -161,12 +209,28 @@ class _RoomListScreenState extends State<RoomListScreen> {
     );
   }
 
-  Widget _buildRoomListItem(Map<String, dynamic> room) {
-    final String nombre = room['NombreHab'] ?? 'Habitación';
-    final String descripcion = room['Descripcion'] ?? 'Sin descripción';
-    final String imagen = room['ImagenUrl'] ?? room['imagen'] ?? '';
-    final double precio = (room['PrecioDia'] ?? room['precio'] ?? 0).toDouble();
-    final List<dynamic> serviciosAdicionales = room['ServiciosAdicional'] ?? [];
+  // Se mantienen el resto de los métodos auxiliares:
+  // _buildRoomListItem, _mostrarDetalleHabitacion, _buildDetalleHabitacion,
+  // _getServiceIcon, _getServiceColor.
+  // Dentro de la clase _RoomListScreenState
+// ...
+
+Widget _buildRoomListItem(Map<String, dynamic> room) {
+    // 🟢 CORRECCIÓN: Usamos las claves de la respuesta de la API ('nombre', 'descripcion', 'precio')
+    final String nombre = (room['nombre'] as String?) ?? 'Habitación sin nombre';
+    final String descripcion = (room['descripcion'] as String?) ?? 'Sin descripción';
+    
+    // Asumimos que 'precio' es un número (int o double)
+    final double precio = (room['precio'] as num?)?.toDouble() ?? 0.0;
+    
+    // La clave de la imagen de la API es 'imagenUrl'
+    final String imagen = (room['imagenUrl'] as String?) ?? '';
+    
+    // 🟢 CORRECCIÓN: La clave de servicios de la API es 'servicios'
+    final List<String> serviciosAdicionales = (room['servicios'] as List<dynamic>?)
+        ?.map((s) => s.toString())
+        .toList() ?? [];
+
 
     return GestureDetector(
       onTap: () => _mostrarDetalleHabitacion(room),
@@ -221,66 +285,70 @@ class _RoomListScreenState extends State<RoomListScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
+                  // 🟢 Ahora usa el nombre correcto de la API
                   Text(
                     nombre,
+                    maxLines: 2, 
+                    overflow: TextOverflow.ellipsis,
                     style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
                   ),
                   const SizedBox(height: 4),
+
+                  // Servicios (Usando la clave 'servicios' corregida)
                   if (serviciosAdicionales.isNotEmpty)
                     Padding(
                       padding: const EdgeInsets.only(bottom: 4),
-                      child: Wrap(
-                        spacing: 4,
-                        runSpacing: 4,
-                        children: serviciosAdicionales.take(3).map((servicio) {
-                          return Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                            decoration: BoxDecoration(
-                              color: _getServiceColor(servicio.toString()),
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                            child: Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                Icon(
-                                  _getServiceIcon(servicio.toString()),
-                                  size: 12,
-                                  color: Colors.white,
-                                ),
-                                const SizedBox(width: 4),
-                                Text(
-                                  servicio.toString(),
-                                  style: const TextStyle(
-                                    fontSize: 10,
-                                    color: Colors.white,
-                                    fontWeight: FontWeight.w500,
+                      child: SizedBox(
+                        height: 25, 
+                        child: SingleChildScrollView(
+                          scrollDirection: Axis.horizontal,
+                          child: Row(
+                            children: serviciosAdicionales.map((servicio) {
+                              return Padding(
+                                padding: const EdgeInsets.only(right: 4.0),
+                                child: Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                  decoration: BoxDecoration(
+                                    color: _getServiceColor(servicio.toString()),
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
+                                  child: Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      Icon(
+                                        _getServiceIcon(servicio.toString()),
+                                        size: 12,
+                                        color: Colors.white,
+                                      ),
+                                      const SizedBox(width: 4),
+                                      Text(
+                                        servicio.toString(),
+                                        style: const TextStyle(
+                                          fontSize: 10,
+                                          color: Colors.white,
+                                          fontWeight: FontWeight.w500,
+                                        ),
+                                      ),
+                                    ],
                                   ),
                                 ),
-                              ],
-                            ),
-                          );
-                        }).toList(),
-                      ),
-                    ),
-                  if (serviciosAdicionales.length > 3)
-                    Padding(
-                      padding: const EdgeInsets.only(bottom: 4),
-                      child: Text(
-                        '+${serviciosAdicionales.length - 3} más',
-                        style: TextStyle(
-                          fontSize: 11,
-                          color: Colors.grey[600],
-                          fontStyle: FontStyle.italic,
+                              );
+                            }).toList(),
+                          ),
                         ),
                       ),
                     ),
+                  
+                  // 🟢 Ahora usa la descripción correcta de la API
                   Text(
                     descripcion,
-                    maxLines: 2,
+                    maxLines: 10,
                     overflow: TextOverflow.ellipsis,
                     style: TextStyle(fontSize: 13, color: Colors.grey[600]),
                   ),
                   const SizedBox(height: 4),
+
+                  // 🟢 Ahora usa el precio correcto de la API
                   if (precio > 0)
                     Text(
                       '\$${precio.toStringAsFixed(2)} / noche',
@@ -299,196 +367,22 @@ class _RoomListScreenState extends State<RoomListScreen> {
       ),
     );
   }
-
   void _mostrarDetalleHabitacion(Map<String, dynamic> habitacion) {
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (context) => _buildDetalleHabitacion(habitacion),
-    );
+    // Navegar a la pantalla de detalle de habitación usando rutas con argumentos
+    if (mounted) {
+      Navigator.pushNamed(
+        context,
+        AppRoutes.roomDetailScreen,
+        arguments: habitacion,
+      );
+    }
   }
 
-  Widget _buildDetalleHabitacion(Map<String, dynamic> habitacion) {
-    final String nombre = habitacion['NombreHab'] ?? 'Habitación';
-    final String descripcion = habitacion['Descripcion'] ?? 'Sin descripción';
-    final String imagen = habitacion['ImagenUrl'] ?? habitacion['imagen'] ?? '';
-    final double precio = (habitacion['PrecioDia'] ?? habitacion['precio'] ?? 0).toDouble();
-    final List<dynamic> servicios = habitacion['ServiciosAdicional'] ?? [];
-    final int idHabitacion = habitacion['idHabitacion'] ?? 0;
-
-    return DraggableScrollableSheet(
-      initialChildSize: 0.7,
-      minChildSize: 0.5,
-      maxChildSize: 0.95,
-      builder: (context, scrollController) {
-        return Container(
-          decoration: const BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-          ),
-          child: Column(
-            children: [
-              Container(
-                margin: const EdgeInsets.symmetric(vertical: 12),
-                width: 40,
-                height: 4,
-                decoration: BoxDecoration(
-                  color: Colors.grey[300],
-                  borderRadius: BorderRadius.circular(2),
-                ),
-              ),
-              Expanded(
-                child: SingleChildScrollView(
-                  controller: scrollController,
-                  padding: const EdgeInsets.all(20),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      if (imagen.isNotEmpty)
-                        ClipRRect(
-                          borderRadius: BorderRadius.circular(12),
-                          child: Image.network(
-                            imagen,
-                            width: double.infinity,
-                            height: 200,
-                            fit: BoxFit.cover,
-                            errorBuilder: (context, error, stackTrace) {
-                              return Container(
-                                width: double.infinity,
-                                height: 200,
-                                color: Colors.grey[300],
-                                child: const Icon(Icons.hotel, size: 80, color: Colors.grey),
-                              );
-                            },
-                          ),
-                        ),
-                      const SizedBox(height: 16),
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Expanded(
-                            child: Text(
-                              nombre,
-                              style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
-                            ),
-                          ),
-                          Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                            decoration: BoxDecoration(
-                              color: const Color(0xFF00897B),
-                              borderRadius: BorderRadius.circular(20),
-                            ),
-                            child: Text(
-                              'ID: $idHabitacion',
-                              style: const TextStyle(
-                                color: Colors.white,
-                                fontWeight: FontWeight.bold,
-                                fontSize: 12,
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 8),
-                      Text(
-                        '\$${precio.toStringAsFixed(2)} / noche',
-                        style: const TextStyle(
-                          fontSize: 20,
-                          fontWeight: FontWeight.bold,
-                          color: Color(0xFF00897B),
-                        ),
-                      ),
-                      const SizedBox(height: 16),
-                      const Text(
-                        'Descripción',
-                        style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-                      ),
-                      const SizedBox(height: 8),
-                      Text(
-                        descripcion,
-                        style: TextStyle(fontSize: 15, color: Colors.grey[700], height: 1.5),
-                      ),
-                      const SizedBox(height: 20),
-                      if (servicios.isNotEmpty) ...[
-                        const Text(
-                          'Servicios Adicionales',
-                          style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-                        ),
-                        const SizedBox(height: 12),
-                        Wrap(
-                          spacing: 8,
-                          runSpacing: 8,
-                          children: servicios.map((servicio) {
-                            return Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-                              decoration: BoxDecoration(
-                                color: const Color(0xFF00897B).withOpacity(0.1),
-                                borderRadius: BorderRadius.circular(20),
-                                border: Border.all(
-                                  color: const Color(0xFF00897B).withOpacity(0.3),
-                                ),
-                              ),
-                              child: Row(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  Icon(
-                                    _getServiceIcon(servicio.toString()),
-                                    size: 18,
-                                    color: const Color(0xFF00897B),
-                                  ),
-                                  const SizedBox(width: 8),
-                                  Text(
-                                    servicio.toString(),
-                                    style: const TextStyle(
-                                      fontSize: 14,
-                                      color: Color(0xFF00897B),
-                                      fontWeight: FontWeight.w500,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            );
-                          }).toList(),
-                        ),
-                      ],
-                      const SizedBox(height: 24),
-                      SizedBox(
-                        width: double.infinity,
-                        child: ElevatedButton(
-                          onPressed: () {
-                            Navigator.pop(context);
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              SnackBar(
-                                content: Text('Reservando: $nombre'),
-                                backgroundColor: const Color(0xFF00897B),
-                              ),
-                            );
-                          },
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: const Color(0xFF00897B),
-                            foregroundColor: Colors.white,
-                            padding: const EdgeInsets.symmetric(vertical: 16),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                          ),
-                          child: const Text(
-                            'Reservar Ahora',
-                            style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            ],
-          ),
-        );
-      },
-    );
-  }
+  // ⚠️ NOTA: El método _buildDetalleHabitacion y el showModalBottomSheet han sido
+  // reemplazados por la navegación a AppRoutes.roomDetailScreen, tal como se
+  // corrigió en el _buildRoomListItem para mantener la consistencia con la arquitectura.
+  // Si deseas volver a usar el BottomSheet, usa la versión anterior.
+  // Mantenemos los helpers de servicio por si se usan en el detalle del BottomSheet.
 
   IconData _getServiceIcon(String servicio) {
     final servicioLower = servicio.toLowerCase();

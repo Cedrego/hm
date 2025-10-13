@@ -1,6 +1,11 @@
 import 'package:flutter/material.dart';
-import '../../core/api_service.dart'; // Importa tu ApiService
+import '../../core/api_service.dart';
+import '../custom_app_bar.dart'; 
+import '../app_drawer.dart'; 
+import '../../core/auth_service.dart'; 
+import '../../core/app_export.dart'; // Asegúrate de que AppRoutes esté aquí
 
+// Constantes de Color Simplificadas
 const Color _kPrimaryColor = Color(0xFF008080);
 const Color _kCardColor = Colors.white;
 const Color _kBlackText = Colors.black;
@@ -14,12 +19,15 @@ class RoomCreationScreen extends StatefulWidget {
 }
 
 class _RoomCreationScreenState extends State<RoomCreationScreen> {
+  // CLAVE PARA EL MENU HAMBURGUESA: Correcto ✅
+  final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
+  
   // Controladores
   final TextEditingController _nombreController = TextEditingController();
   final TextEditingController _descripcionController = TextEditingController();
   final TextEditingController _servicioAdicionalController = TextEditingController();
   
-  // Estados
+  // Estados de la habitación
   bool _servicioAlCuarto = false;
   bool _jacuzzi = false;
   bool _minibar = false;
@@ -27,7 +35,37 @@ class _RoomCreationScreenState extends State<RoomCreationScreen> {
   
   double _precio = 40.90;
   String? _imagenUrl;
-  bool _isLoading = false;
+
+  // Estados de carga y datos de usuario
+  bool _isLoadingCreation = false; 
+  bool _isLoadingUserData = true; 
+  Map<String, dynamic>? _userData;
+
+  bool get _isAdmin => _userData?['rol'] == 'admin';
+
+  @override
+  void initState() {
+    super.initState();
+    _loadUserData(); 
+  }
+
+  // Método para cargar los datos del usuario
+  Future<void> _loadUserData() async {
+    try {
+      final userData = await AuthService.getUserData();
+      if (!mounted) return;
+      setState(() {
+        _userData = userData;
+        _isLoadingUserData = false;
+      });
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _isLoadingUserData = false;
+      });
+      _mostrarError('Error al cargar datos de usuario.');
+    }
+  }
 
   @override
   void dispose() {
@@ -71,193 +109,231 @@ class _RoomCreationScreenState extends State<RoomCreationScreen> {
     });
   }
 
+  Future<void> _onLogoutPressed(BuildContext context) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Confirmación'),
+        content: const Text('¿Está seguro de cerrar sesión?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancelar'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            style: TextButton.styleFrom(foregroundColor: Colors.red),
+            child: const Text('Cerrar sesión'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed == true && mounted) {
+      await AuthService.logout();
+      Navigator.pushNamedAndRemoveUntil(
+        context,
+        AppRoutes.loginScreen,
+        (route) => false,
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
-    return Container(
-      color: _kPrimaryColor,
-      child: SafeArea(
-        child: Scaffold(
-          backgroundColor: Colors.transparent,
-          body: SingleChildScrollView(
+    if (_isLoadingUserData) {
+      // Usar un Scaffold para el loading inicial en caso de que sea una pantalla principal
+      return const Scaffold(body: Center(child: CircularProgressIndicator()));
+    }
+    
+    // Verificación de administrador
+    if (!_isAdmin) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        _mostrarError('Acceso denegado: solo administradores pueden crear habitaciones.');
+        if (Navigator.canPop(context)) {
+          Navigator.pop(context); 
+        } else {
+          // Si no puede hacer pop, navega a la pantalla principal
+          Navigator.pushReplacementNamed(context, AppRoutes.mainPage); 
+        }
+      });
+      return const SizedBox.shrink(); 
+    }
+
+    // 🟢 ELIMINADA LA REDUNDANCIA: Se usa un solo Scaffold 
+    return Scaffold(
+      key: _scaffoldKey, // Asignación correcta
+      backgroundColor: _kPrimaryColor, // Color principal de fondo
+      
+      appBar: CustomAppBar(
+        scaffoldKey: _scaffoldKey, // Paso correcto para el Drawer
+        onLogoutPressed: () => _onLogoutPressed(context),
+        userData: _userData,
+        isAdmin: _isAdmin,
+      ),
+      
+      drawer: AppDrawer(
+        userData: _userData,
+        isAdmin: _isAdmin,
+        onLogoutPressed: _onLogoutPressed,
+      ),
+      
+      body: SingleChildScrollView(
+        child: Padding(
+          padding: const EdgeInsets.all(20.0),
+          child: Container(
+            padding: const EdgeInsets.all(20.0),
+            decoration: BoxDecoration(
+              color: _kCardColor,
+              borderRadius: BorderRadius.circular(10.0),
+              // Sombra sutil para el efecto de tarjeta
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.1),
+                  blurRadius: 10,
+                  offset: const Offset(0, 5),
+                ),
+              ],
+            ),
             child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // Header
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 10.0),
-                  child: Row(
-                    children: [
-                      IconButton(
-                        icon: const Icon(Icons.arrow_back, color: _kCardColor, size: 30),
-                        onPressed: () => Navigator.pop(context),
-                      ),
-                      const Spacer(),
-                      const Text(
-                        'Hostel Mochileros',
-                        style: TextStyle(
-                          fontFamily: 'Serif',
-                          fontSize: 34,
-                          color: _kCardColor,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                      const Spacer(),
-                      const SizedBox(width: 30),
-                    ],
+                const Text(
+                  'Detalles de la Habitación',
+                  style: TextStyle(
+                    fontSize: 22,
+                    fontWeight: FontWeight.bold,
+                    color: _kBlackText,
                   ),
                 ),
+                const SizedBox(height: 20),
+
+                // Nombre
+                const Text('Nombre de la Habitación', style: TextStyle(color: _kBlackText, fontWeight: FontWeight.w600)),
+                _buildTextField(
+                  'Ej: Habitación Deluxe 1',
+                  controller: _nombreController,
+                ),
+
+                // Descripción
+                const Text('Descripción', style: TextStyle(color: _kBlackText, fontWeight: FontWeight.w600)),
+                _buildDescriptionField(),
+
+                // Servicios Adicionales Dinámicos
+                const Text('Agregar Servicio (Opcional)', style: TextStyle(color: _kBlackText, fontWeight: FontWeight.w600)),
+                _buildServicioAdicionalField(),
+
+                const SizedBox(height: 10),
+                const Text('Servicios Incluidos', style: TextStyle(color: _kBlackText, fontSize: 16, fontWeight: FontWeight.bold)),
+                const Divider(color: Colors.grey),
+
+                // Checkboxes predefinidos
+                _buildCheckboxRow('Servicio al cuarto', _servicioAlCuarto, (bool? newValue) {
+                  setState(() => _servicioAlCuarto = newValue ?? false);
+                }),
+                _buildCheckboxRow('Jacuzzi', _jacuzzi, (bool? newValue) {
+                  setState(() => _jacuzzi = newValue ?? false);
+                }),
+                _buildCheckboxRow('Minibar', _minibar, (bool? newValue) {
+                  setState(() => _minibar = newValue ?? false);
+                }, useBorderedCheckbox: true),
+
+                // Servicios adicionales dinámicos
+                ..._serviciosAdicionales.asMap().entries.map((entry) {
+                  int index = entry.key;
+                  Map<String, dynamic> servicio = entry.value;
+                  
+                  return _buildCheckboxRowConEliminar(
+                    servicio['nombre'],
+                    servicio['seleccionado'],
+                    (bool? newValue) {
+                      setState(() {
+                        _serviciosAdicionales[index]['seleccionado'] = newValue ?? false;
+                      });
+                    },
+                    () {
+                      setState(() {
+                        _serviciosAdicionales.removeAt(index);
+                      });
+                      
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Text('Servicio "${servicio['nombre']}" eliminado'),
+                          duration: const Duration(seconds: 2),
+                          backgroundColor: Colors.orange,
+                        ),
+                      );
+                    },
+                  );
+                }).toList(),
 
                 const SizedBox(height: 20),
 
-                // Tarjeta blanca
-                Padding(
-                  padding: const EdgeInsets.all(20.0),
-                  child: Container(
-                    padding: const EdgeInsets.all(20.0),
-                    decoration: BoxDecoration(
-                      color: _kCardColor,
-                      borderRadius: BorderRadius.circular(10.0),
-                    ),
-                    child: Column(
+                // Precio e Imagen
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.end,
+                  children: [
+                    Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        const Text(
-                          'Crear Habitacion',
-                          style: TextStyle(
-                            fontSize: 22,
-                            fontWeight: FontWeight.bold,
-                            color: _kBlackText,
-                          ),
-                        ),
-                        const SizedBox(height: 20),
-
-                        // Nombre
-                        const Text('Nombre de la Habitacion', style: TextStyle(color: _kBlackText)),
-                        _buildTextField(
-                          'Ingrese un nombre de habitacion',
-                          controller: _nombreController,
-                        ),
-
-                        // Descripción
-                        const Text('Descripcion', style: TextStyle(color: _kBlackText)),
-                        _buildDescriptionField(),
-
-                        // Servicios Adicionales
-                        const Text('Servicios adicionales', style: TextStyle(color: _kBlackText)),
-                        _buildServicioAdicionalField(),
-
-                        const SizedBox(height: 10),
-
-                        // Checkboxes predefinidos
-                        _buildCheckboxRow('Servicio al cuarto', _servicioAlCuarto, (bool? newValue) {
-                          setState(() => _servicioAlCuarto = newValue ?? false);
-                        }),
-                        _buildCheckboxRow('Jacuzzi', _jacuzzi, (bool? newValue) {
-                          setState(() => _jacuzzi = newValue ?? false);
-                        }),
-                        _buildCheckboxRow('Minibar', _minibar, (bool? newValue) {
-                          setState(() => _minibar = newValue ?? false);
-                        }, useBorderedCheckbox: true),
-
-                        // Servicios adicionales dinámicos
-                        ..._serviciosAdicionales.asMap().entries.map((entry) {
-                          int index = entry.key;
-                          Map<String, dynamic> servicio = entry.value;
-                          
-                          return _buildCheckboxRowConEliminar(
-                            servicio['nombre'],
-                            servicio['seleccionado'],
-                            (bool? newValue) {
-                              setState(() {
-                                _serviciosAdicionales[index]['seleccionado'] = newValue ?? false;
-                              });
-                            },
-                            () {
-                              setState(() {
-                                _serviciosAdicionales.removeAt(index);
-                              });
-                              
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                SnackBar(
-                                  content: Text('Servicio "${servicio['nombre']}" eliminado'),
-                                  duration: const Duration(seconds: 2),
-                                  backgroundColor: Colors.orange,
-                                ),
-                              );
-                            },
-                          );
-                        }).toList(),
-
-                        const SizedBox(height: 20),
-
-                        // Precio e Imagen
-                        Row(
-                          crossAxisAlignment: CrossAxisAlignment.end,
-                          children: [
-                            Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                const Text('Precio x dia', style: TextStyle(color: _kBlackText)),
-                                const SizedBox(height: 5),
-                                _PriceInput(
-                                  precio: _precio,
-                                  onIncrement: _incrementarPrecio,
-                                  onDecrement: _decrementarPrecio,
-                                ),
-                              ],
-                            ),
-                            const SizedBox(width: 20),
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  const Text('Ingrese una Imagen', style: TextStyle(color: _kBlackText)),
-                                  const SizedBox(height: 5),
-                                  _ImageUploader(
-                                    onImageSelected: (url) {
-                                      setState(() {
-                                        _imagenUrl = url;
-                                      });
-                                    },
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ],
-                        ),
-
-                        const SizedBox(height: 30),
-
-                        // Botón Crear
-                        SizedBox(
-                          width: double.infinity,
-                          child: ElevatedButton(
-                            onPressed: _isLoading ? null : _crearHabitacion,
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: _kDarkButton,
-                              padding: const EdgeInsets.symmetric(vertical: 15),
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(5),
-                              ),
-                              disabledBackgroundColor: Colors.grey,
-                            ),
-                            child: _isLoading
-                                ? const SizedBox(
-                                    height: 20,
-                                    width: 20,
-                                    child: CircularProgressIndicator(
-                                      strokeWidth: 2,
-                                      valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
-                                    ),
-                                  )
-                                : const Text(
-                                    'Crear',
-                                    style: TextStyle(fontSize: 18, color: _kCardColor),
-                                  ),
-                          ),
+                        const Text('Precio x día', style: TextStyle(color: _kBlackText, fontWeight: FontWeight.w600)),
+                        const SizedBox(height: 5),
+                        _PriceInput(
+                          precio: _precio,
+                          onIncrement: _incrementarPrecio,
+                          onDecrement: _decrementarPrecio,
                         ),
                       ],
                     ),
+                    const SizedBox(width: 20),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text('Imagen URL', style: TextStyle(color: _kBlackText, fontWeight: FontWeight.w600)),
+                          const SizedBox(height: 5),
+                          _ImageUploader(
+                            onImageSelected: (url) {
+                              setState(() {
+                                _imagenUrl = url;
+                              });
+                            },
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+
+                const SizedBox(height: 30),
+
+                // Botón Crear
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton(
+                    onPressed: _isLoadingCreation ? null : _crearHabitacion,
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: _kDarkButton,
+                      foregroundColor: _kCardColor,
+                      padding: const EdgeInsets.symmetric(vertical: 15),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(5),
+                      ),
+                      disabledBackgroundColor: Colors.grey,
+                    ),
+                    child: _isLoadingCreation
+                        ? const SizedBox(
+                            height: 20,
+                            width: 20,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                            ),
+                          )
+                        : const Text(
+                            'Crear Habitación',
+                            style: TextStyle(fontSize: 18, color: _kCardColor, fontWeight: FontWeight.bold),
+                          ),
                   ),
                 ),
               ],
@@ -268,6 +344,7 @@ class _RoomCreationScreenState extends State<RoomCreationScreen> {
     );
   }
 
+  // Métodos de construcción de widgets (sin cambios significativos)
   Widget _buildTextField(String hintText, {TextEditingController? controller}) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 8.0),
@@ -281,6 +358,10 @@ class _RoomCreationScreenState extends State<RoomCreationScreen> {
           ),
           filled: true,
           fillColor: Colors.white,
+          // Cursor color
+          focusedBorder: OutlineInputBorder(
+            borderSide: BorderSide(color: _kPrimaryColor, width: 2.0),
+          ),
         ),
       ),
     );
@@ -293,13 +374,16 @@ class _RoomCreationScreenState extends State<RoomCreationScreen> {
         controller: _descripcionController,
         maxLines: 4,
         decoration: InputDecoration(
-          hintText: 'Ingrese una descripción',
+          hintText: 'Ingrese una descripción detallada de la habitación',
           contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
           border: const OutlineInputBorder(
             borderSide: BorderSide(color: Colors.grey),
           ),
           filled: true,
           fillColor: Colors.white,
+          focusedBorder: OutlineInputBorder(
+            borderSide: BorderSide(color: _kPrimaryColor, width: 2.0),
+          ),
         ),
       ),
     );
@@ -314,13 +398,16 @@ class _RoomCreationScreenState extends State<RoomCreationScreen> {
             child: TextField(
               controller: _servicioAdicionalController,
               decoration: InputDecoration(
-                hintText: 'Ingrese un servicio',
+                hintText: 'Ej: Desayuno Buffet',
                 contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
                 border: const OutlineInputBorder(
                   borderSide: BorderSide(color: Colors.grey),
                 ),
                 filled: true,
                 fillColor: Colors.white,
+                focusedBorder: OutlineInputBorder(
+                  borderSide: BorderSide(color: _kPrimaryColor, width: 2.0),
+                ),
               ),
               onSubmitted: (_) => _agregarServicioAdicional(),
             ),
@@ -352,10 +439,11 @@ class _RoomCreationScreenState extends State<RoomCreationScreen> {
           Checkbox(
             value: value,
             onChanged: onChanged,
-            shape: useBorderedCheckbox ? const CircleBorder() : null,
-            activeColor: _kBlackText,
-            checkColor: _kCardColor,
-            side: const BorderSide(color: _kBlackText, width: 2),
+            // Forma y colores mejorados
+            shape: useBorderedCheckbox ? const CircleBorder() : RoundedRectangleBorder(borderRadius: BorderRadius.circular(4)),
+            activeColor: _kDarkButton, // Color cuando está chequeado
+            checkColor: _kCardColor, // Color del checkmark
+            side: const BorderSide(color: _kDarkButton, width: 1.5), // Color del borde
           ),
         ],
       ),
@@ -383,17 +471,18 @@ class _RoomCreationScreenState extends State<RoomCreationScreen> {
           Row(
             children: [
               IconButton(
-                icon: const Icon(Icons.delete, color: Colors.red, size: 20),
+                icon: const Icon(Icons.delete_outline, color: Colors.red, size: 22),
                 onPressed: onDelete,
                 padding: EdgeInsets.zero,
-                constraints: const BoxConstraints(),
+                constraints: const BoxConstraints(minWidth: 30, minHeight: 30),
               ),
               Checkbox(
                 value: value,
                 onChanged: onChanged,
-                activeColor: _kBlackText,
+                activeColor: _kDarkButton,
                 checkColor: _kCardColor,
-                side: const BorderSide(color: _kBlackText, width: 2),
+                side: const BorderSide(color: _kDarkButton, width: 1.5),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(4)),
               ),
             ],
           ),
@@ -429,12 +518,12 @@ class _RoomCreationScreenState extends State<RoomCreationScreen> {
 
     // Mostrar loading
     setState(() {
-      _isLoading = true;
+      _isLoadingCreation = true;
     });
 
     try {
       // Llamar al API
-      final response = await ApiService.crearHabitacion(
+      await ApiService.crearHabitacion(
         nombre: _nombreController.text.trim(),
         descripcion: _descripcionController.text.trim(),
         precio: _precio,
@@ -458,7 +547,7 @@ class _RoomCreationScreenState extends State<RoomCreationScreen> {
           ),
         );
 
-        // Navegar hacia atrás o a otra pantalla
+        // Navegar hacia atrás
         Navigator.pop(context);
       }
     } catch (e) {
@@ -470,7 +559,7 @@ class _RoomCreationScreenState extends State<RoomCreationScreen> {
       // Ocultar loading
       if (mounted) {
         setState(() {
-          _isLoading = false;
+          _isLoadingCreation = false;
         });
       }
     }
@@ -493,7 +582,7 @@ class _RoomCreationScreenState extends State<RoomCreationScreen> {
   }
 }
 
-// Widget de precio actualizado
+// Widgets _PriceInput y _ImageUploader (se mantienen, solo se limpian las constantes)
 class _PriceInput extends StatelessWidget {
   final double precio;
   final VoidCallback onIncrement;
@@ -548,7 +637,6 @@ class _PriceInput extends StatelessWidget {
   }
 }
 
-// Widget de imagen
 class _ImageUploader extends StatelessWidget {
   final Function(String) onImageSelected;
 
@@ -556,36 +644,30 @@ class _ImageUploader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Row(
-      children: [
-        Expanded(
-          child: InkWell(
-            onTap: () {
-              // TODO: Implementar selección de imagen
-              // Por ahora, simular con URL
-              onImageSelected('https://example.com/imagen.jpg');
-            },
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-              decoration: BoxDecoration(
-                color: const Color(0xFFF0F0F0),
-                borderRadius: BorderRadius.circular(5),
-                border: Border.all(color: Colors.grey.shade400),
-              ),
-              child: const Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(Icons.upload, size: 20, color: _kBlackText),
-                  SizedBox(width: 5),
-                  Text('Browse', style: TextStyle(color: _kBlackText)),
-                ],
-              ),
-            ),
-          ),
+    // Implementación simulada de selección de imagen
+    return TextField(
+      onChanged: onImageSelected,
+      decoration: InputDecoration(
+        hintText: 'Pegar URL de la imagen (ej: https://...)',
+        contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
+        border: const OutlineInputBorder(
+          borderSide: BorderSide(color: Colors.grey),
         ),
-        const SizedBox(width: 5),
-        const Icon(Icons.link, color: _kDarkButton, size: 30),
-      ],
+        filled: true,
+        fillColor: Colors.white,
+        focusedBorder: OutlineInputBorder(
+          borderSide: BorderSide(color: _kPrimaryColor, width: 2.0),
+        ),
+        suffixIcon: IconButton(
+          icon: const Icon(Icons.upload_file, color: _kDarkButton),
+          onPressed: () {
+            // Opcional: Abrir un diálogo para pegar URL o subir archivo
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(content: Text('Función de subida de imagen aún no implementada.')),
+            );
+          },
+        ),
+      ),
     );
   }
 }
