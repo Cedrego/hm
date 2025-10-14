@@ -47,7 +47,6 @@ class _MainPageState extends State<MainPage> {
    Widget build(BuildContext context) {
       final String roomListRoute = AppRoutes.roomListScreen;
       final String roomCreationRoute = AppRoutes.roomCreationScreen;
-      final String reservationsRoute = '/reservas';
       final String MisreservationsRoute = AppRoutes.misReservas;
       final String profileRoute = AppRoutes.profileScreen;
       final String informationRoute = '/informacion';

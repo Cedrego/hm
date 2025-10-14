@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import '../../core/api_service.dart';
 import '../../core/auth_service.dart';
 import '../../routes/app_routes.dart'; 
-import 'reserva_detalle_screen.dart'; 
+
 
 class MisReservasScreen extends StatefulWidget {
   const MisReservasScreen({super.key});

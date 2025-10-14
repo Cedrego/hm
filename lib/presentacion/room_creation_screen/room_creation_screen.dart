@@ -376,6 +376,7 @@ class _RoomCreationScreenState extends State<RoomCreationScreen> {
     );
   }
 
+  // ignore: unused_element
   Widget _buildArrowButton(IconData icon, VoidCallback onPressed) {
     return InkWell(
       onTap: onPressed,
@@ -685,6 +686,7 @@ class _RoomCreationScreenState extends State<RoomCreationScreen> {
   }
 }
 
+// ignore: unused_element
 class _PriceInput extends StatelessWidget {
   final double precio;
   final VoidCallback onIncrement;
