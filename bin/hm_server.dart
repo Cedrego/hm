@@ -1,4 +1,3 @@
-import 'package:hm_server/hm_server.dart' as hm_server;
 import 'dart:io';
 import 'package:shelf/shelf.dart';
 import 'package:shelf/shelf_io.dart' as shelf_io;
@@ -58,20 +57,21 @@ void main() async {
   // Endpoint para registro
   appRouter.post('/api/registro', registroHandler.handleRegistro);
 
+  // Rutas de Habitaciones
   appRouter.post('/api/habitaciones', habitacionHandler.crearHabitacion);
   appRouter.get('/api/habitaciones', habitacionHandler.getHabitaciones);
 
- // Rutas de Reservas
+  // Rutas de Reservas
   appRouter.post('/api/reservas', reservaHandler.crearReserva);
+  // Obtener reservas por habitación
   appRouter.get('/api/reservas/habitacion/<idHabitacion>', reservaHandler.getReservasByHabitacion);
   // Obtener reservas de un usuario
   appRouter.get('/api/reservas/usuario/<idUsuario>', reservaHandler.getReservasByUsuario);
   // Obtener todas las reservas (opcional - para admin)
   appRouter.get('/api/reservas', reservaHandler.getAllReservas);
-  
   // Cancelar reserva
   appRouter.put('/api/reservas/<id>/cancelar', reservaHandler.cancelarReserva);
-  
+
 
   // Endpoint para obtener usuarios (para pruebas)
   appRouter.get('/api/usuarios', (Request request) async {
@@ -85,7 +85,7 @@ void main() async {
   // Endpoint para obtener perfil de usuario
   appRouter.get('/api/perfil/<id>', (Request request, String id) async {
     final usuario = await mongoService.findUserById(id);
-    
+
     if (usuario == null) {
       return Response.notFound(
         '{"success": false, "message": "Usuario no encontrado"}',
@@ -119,9 +119,14 @@ void main() async {
   print('  GET  /api/saludo');
   print('  POST /api/login');
   print('  POST /api/registro');
-  print('  GET  /api/usuarios');
-  print('  GET  /api/perfil/<id>');
+  print('  POST /api/habitaciones');
+  print('  GET  /api/habitaciones');
   print('  POST /api/reservas');
   print('  GET  /api/reservas/habitacion/<idHabitacion>');
+  print('  GET  /api/reservas/usuario/<idUsuario>');
+  print('  GET  /api/reservas');
+  print('  PUT  /api/reservas/<id>/cancelar');
+  print('  GET  /api/usuarios');
+  print('  GET  /api/perfil/<id>');
   print('═══════════════════════════════════════════════════');
 }
