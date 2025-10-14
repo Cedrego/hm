@@ -144,7 +144,7 @@ class ApiService {
       throw Exception('Error de conexión: $e');
     }
   }
-
+/*
   // Obtener Reservas por Habitación
   static Future<List<dynamic>> getReservasPorHabitacion(String idHabitacion) async {
     try {
@@ -164,6 +164,7 @@ class ApiService {
       throw Exception('Error de conexión: $e');
     }
   }
+  */
 // Obtener reservas de una habitación
 static Future<List<dynamic>> getReservasPorHabitacion(String habitacionId) async {
   try {

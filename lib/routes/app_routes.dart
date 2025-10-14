@@ -12,6 +12,7 @@ import '../presentacion/room_list/reservation_form_screen.dart';
 import '../presentacion/reservas/misreservas_screen.dart';
 import '../presentacion/reservas/reserva_detalle_screen.dart';
 
+
 class AppRoutes {
   static const String registrationScreen = '/registration_screen';
   static const String loginScreen = '/login_screen';
@@ -58,8 +59,6 @@ class AppRoutes {
       final Map<String, dynamic> room = ModalRoute.of(context)!.settings.arguments as Map<String, dynamic>;
       return ReservationListScreen(room: room);
     },
-  };
-}
     misReservas: (context) => const MisReservasScreen(),
     misReservasDetalle: (context) {
       // 1. Obtener los argumentos que se pasaron a esta ruta.
