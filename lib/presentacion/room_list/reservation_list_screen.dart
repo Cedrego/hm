@@ -66,7 +66,7 @@ class _ReservationListScreenState extends State<ReservationListScreen> {
     });
 
     try {
-      final idHabitacion = widget.room['id'] ?? '';
+      final idHabitacion = widget.room['idHabitacion'] ?? '';
       if (idHabitacion.isEmpty) {
         throw Exception('ID de habitación no encontrado.');
       }

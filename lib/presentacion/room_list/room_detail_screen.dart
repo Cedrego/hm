@@ -58,8 +58,8 @@ class _RoomDetailScreenState extends State<RoomDetailScreen> {
     final dynamic precioDia = room['precio'] ?? 0;
     final double precio = (precioDia is int) ? precioDia.toDouble() : (precioDia as double? ?? 0.0);
     final List<dynamic> serviciosAdicionales = room['servicios'] ?? [];
-    final String idHabitacion = room['id'] ?? '';
-
+    final String idHabitacion = room['idHabitacion'] ?? '';
+    
     // Manejar el cierre de sesión desde el CustomAppBar
     void onLogoutPressed(BuildContext context) {
       AuthService.logout();

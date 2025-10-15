@@ -9,7 +9,7 @@ import 'dart:typed_data';
 
 class RoomListScreen extends StatefulWidget {
   // 🟢 Eliminado el parámetro 'user' ya que se carga con AuthService.
-  const RoomListScreen({super.key}); 
+  const RoomListScreen({super.key});
 
   @override
   State<RoomListScreen> createState() => _RoomListScreenState();
@@ -211,14 +211,7 @@ class _RoomListScreenState extends State<RoomListScreen> {
     );
   }
 
-  // Se mantienen el resto de los métodos auxiliares:
-  // _buildRoomListItem, _mostrarDetalleHabitacion, _buildDetalleHabitacion,
-  // _getServiceIcon, _getServiceColor.
-  // Dentro de la clase _RoomListScreenState
-// ...
-
 Widget _buildRoomListItem(Map<String, dynamic> room) {
-    // 🟢 CORRECCIÓN: Usamos las claves de la respuesta de la API ('nombre', 'descripcion', 'precio')
     final String nombre = (room['nombre'] as String?) ?? 'Habitación sin nombre';
     final String descripcion = (room['descripcion'] as String?) ?? 'Sin descripción';
     
@@ -403,12 +396,6 @@ Widget _buildRoomImage(String? imagenBase64) {
       );
     }
   }
-
-  // ⚠️ NOTA: El método _buildDetalleHabitacion y el showModalBottomSheet han sido
-  // reemplazados por la navegación a AppRoutes.roomDetailScreen, tal como se
-  // corrigió en el _buildRoomListItem para mantener la consistencia con la arquitectura.
-  // Si deseas volver a usar el BottomSheet, usa la versión anterior.
-  // Mantenemos los helpers de servicio por si se usan en el detalle del BottomSheet.
 
   IconData _getServiceIcon(String servicio) {
     final servicioLower = servicio.toLowerCase();

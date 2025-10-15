@@ -165,6 +165,7 @@ class ApiService {
     }
   }
   */
+  
 // Obtener reservas de una habitación
 static Future<List<dynamic>> getReservasPorHabitacion(String habitacionId) async {
   try {
@@ -184,6 +185,7 @@ static Future<List<dynamic>> getReservasPorHabitacion(String habitacionId) async
     throw Exception('Error de conexión: $e');
   }
 }
+
 // Obtener reservas de un usuario
 static Future<List<dynamic>> getReservasUsuario(String usuarioId) async {
   try {

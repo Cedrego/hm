@@ -23,7 +23,7 @@ class _ReservationFormScreenState extends State<ReservationFormScreen> {
   
   // Extraer datos de la habitación
   double get _roomPrice => (widget.room['precio'] as num?)?.toDouble() ?? 0.0;
-  String get _roomId => widget.room['id'] ?? '';
+  String get _roomId => widget.room['idHabitacion'] ?? '';
   String get _roomName => widget.room['nombre'] ?? 'Habitación Desconocida';
 
   // Obtener la duración de la reserva en días
