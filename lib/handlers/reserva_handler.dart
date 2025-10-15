@@ -7,6 +7,19 @@ class ReservaHandler {
   final MongoService mongoService;
 
   ReservaHandler(this.mongoService);
+  
+  // 🟢 FUNCIÓN DE LIMPIEZA CLAVE: Extrae el ID hexadecimal puro de la cadena ObjectId("...")
+  String _cleanMongoId(String? id) {
+    if (id == null) return '';
+    // Elimina 'ObjectId("' al principio y '")' al final de la cadena
+    final String cleaned = id.replaceAll('ObjectId("', '').replaceAll('")', '');
+    
+    // Verifica que el resultado sea un ID válido de 24 caracteres para seguridad
+    if (cleaned.length == 24 && RegExp(r'^[0-9a-fA-F]+$').hasMatch(cleaned)) {
+        return cleaned;
+    }
+    return ''; // Devuelve cadena vacía si no es un ID válido.
+  }
 
   // =========================================================================
   // 1. CREAR RESERVA (POST /api/reservas)
@@ -15,32 +28,49 @@ class ReservaHandler {
     try {
       final body = await request.readAsString();
       final data = jsonDecode(body);
+      print('📥 RESERVA BODY: $body');
+      
+      // --- 1. Extracción y Limpieza de Campos ---
+      
+      // 🟢 CORRECCIÓN: Limpiamos ambos IDs entrantes que vienen con el prefijo ObjectId(...)
+      final String rawIdUsuario = data['idUsuario']?.toString() ?? '';
+      final String rawIdHabitacion = data['idHabitacion']?.toString() ?? ''; 
 
-      // --- 1. Extracción y Validación de Campos ---
-      final String? idUsuario = data['idUsuario']?.toString();
-      final String? idHabitacionStr = data['idHabitacion']?.toString(); // 🟢 Cambiado a Str temporal
+      final String idUsuario = _cleanMongoId(rawIdUsuario);
+      final String idHabitacion = _cleanMongoId(rawIdHabitacion);
+
       final String? checkInStr = data['fechaCheckIn']?.toString();
       final String? checkOutStr = data['fechaCheckOut']?.toString();
 
-      if (idUsuario == null || idHabitacionStr == null || checkInStr == null || checkOutStr == null) {
+      // Validamos que los IDs limpios no estén vacíos
+      if (idUsuario.isEmpty || idHabitacion.isEmpty || checkInStr == null || checkOutStr == null) {
         return Response.badRequest(
-          body: jsonEncode({'success': false, 'message': 'Faltan campos requeridos (idUsuario, idHabitacion, fechas)'}),
+          body: jsonEncode({'success': false, 'message': 'Faltan campos requeridos (idUsuario, idHabitacion, fechas) o los IDs son inválidos.'}),
           headers: {'Content-Type': 'application/json'},
         );
       }
       
-      // 🟢 CORRECCIÓN CLAVE: Parsear idHabitacion a entero
-      final int? idHabitacion = int.tryParse(idHabitacionStr);
-      if (idHabitacion == null || idHabitacion <= 0) {
-           return Response.badRequest(
-            body: jsonEncode({'success': false, 'message': 'El idHabitacion proporcionado no es válido o debe ser numérico.'}),
-            headers: {'Content-Type': 'application/json'},
-          );
+      final DateFormat dateFormat = DateFormat('yyyy-MM-dd');
+      
+      DateTime checkIn;
+      try {
+        checkIn = dateFormat.parse(checkInStr);
+      } catch (e) {
+        return Response.badRequest(
+          body: jsonEncode({'success': false, 'message': 'El formato de fechaCheckIn es inválido. Debe ser yyyy-MM-dd.'}),
+          headers: {'Content-Type': 'application/json'},
+        );
       }
-
-      // --- 2. Validación y Cálculo de Días ---
-      final DateTime checkIn = DateTime.parse(checkInStr);
-      final DateTime checkOut = DateTime.parse(checkOutStr);
+      
+      DateTime checkOut;
+      try {
+        checkOut = dateFormat.parse(checkOutStr);
+      } catch (e) {
+        return Response.badRequest(
+          body: jsonEncode({'success': false, 'message': 'El formato de fechaCheckOut es inválido. Debe ser yyyy-MM-dd.'}),
+          headers: {'Content-Type': 'application/json'},
+        );
+      }
 
       if (checkOut.isBefore(checkIn) || checkOut.isAtSameMomentAs(checkIn)) {
         return Response.badRequest(
@@ -52,12 +82,12 @@ class ReservaHandler {
       final int diasEstadia = checkOut.difference(checkIn).inDays;
 
       // --- 3. Obtener Precio por Noche (Cálculo en el Servidor) ---
-      // 🟢 CORRECCIÓN: Usando el método correcto findHabitacionById
-      final habitacion = await mongoService.findHabitacionById(idHabitacion); 
+      print('🔍 Buscando habitación por ID de MongoDB (limpio): $idHabitacion');
+      final habitacion = await mongoService.findHabitacionByMongoId(idHabitacion); 
 
       if (habitacion == null) {
          return Response.notFound(
-          jsonEncode({'success': false, 'message': 'Habitación no encontrada'}),
+          jsonEncode({'success': false, 'message': 'Habitación no encontrada con ID: $idHabitacion'}),
           headers: {'Content-Type': 'application/json'},
         );
       }
@@ -75,8 +105,8 @@ class ReservaHandler {
 
       // --- 4. Preparar Datos para MongoDB ---
       final reservaData = {
-        'idUsuario': idUsuario, 
-        'idHabitacion': idHabitacion, // 🟢 Almacenado como INT
+        'idUsuario': idUsuario, // ID de usuario limpio
+        'idHabitacion': idHabitacion, // ID de habitación limpio
         'fechaCheckIn': checkInStr,
         'fechaCheckOut': checkOutStr,
         'precioTotal': precioTotal, 
@@ -128,7 +158,6 @@ class ReservaHandler {
       }
       final idHabitacionStr = parts.last;
 
-      // 🟢 CORRECCIÓN: Usando el método correcto findReservasByHabitacion
       final reservas = await mongoService.findReservasByHabitacion(idHabitacionStr);
 
       // --- Búsqueda de Usuario y Transformación ---
@@ -136,10 +165,8 @@ class ReservaHandler {
         
         final String userId = reserva['idUsuario'].toString();
         
-        // Lookup de usuario usando findUserById (asumimos que idUsuario es el _id de Mongo)
         final userDoc = await mongoService.findUserById(userId); 
         
-        // Extraer los datos que interesan
         final nombreUsuario = userDoc?['nombre'] ?? 'Usuario Desconocido'; 
         final documentoUsuario = userDoc?['documento'] ?? 'N/A';
         
@@ -152,7 +179,6 @@ class ReservaHandler {
           'fechaCheckOut': reserva['fechaCheckOut'],
           'precioTotal': reserva['precioTotal'],
           'estado': reserva['estado'],
-          // Devolvemos el objeto completo del usuario
           'usuario': userDoc != null ? {
               'id': userDoc['_id'].toString(),
               'email': userDoc['email'],
@@ -184,7 +210,9 @@ class ReservaHandler {
       );
     }
   }
-  // 3. OBTENER RESERVAS POR USUARIO
+  // =========================================================================
+  // 3. OBTENER RESERVAS POR USUARIO (GET /api/reservas/usuario/{idUsuario})
+  // =========================================================================
 Future<Response> getReservasByUsuario(Request request) async {
   try {
     final parts = request.url.pathSegments;
@@ -194,13 +222,13 @@ Future<Response> getReservasByUsuario(Request request) async {
         headers: {'Content-Type': 'application/json'},
       );
     }
-    final idUsuario = parts.last; // Obtener el último segmento de la URL
+    final idUsuario = parts.last; 
 
     final reservas = await mongoService.findReservasByUsuario(idUsuario);
 
     final reservasTransformadas = await Future.wait(reservas.map((reserva) async {
-      final int idHabitacion = reserva['idHabitacion'] as int;
-      final habitacion = await mongoService.findHabitacionById(idHabitacion);
+      final String idHabitacion = reserva['idHabitacion'] as String;
+      final habitacion = await mongoService.findHabitacionByMongoId(idHabitacion);
       
       return {
         'idReserva': reserva['idReserva'] ?? reserva['_id'].toString(),
@@ -215,8 +243,8 @@ Future<Response> getReservasByUsuario(Request request) async {
         'habitacion': habitacion != null ? {
           'nombre': habitacion['NombreHab'],
           'descripcion': habitacion['Descripcion'],
-          'imagen': habitacion['ImagenUrl'],
-          'servicios': habitacion['ServiciosAdicional'] ?? [],
+          'imagen': habitacion['imagen'],
+          'servicios': habitacion['ServicioAdicional'] ?? [],
         } : null,
       };
     }));
@@ -233,7 +261,9 @@ Future<Response> getReservasByUsuario(Request request) async {
     );
   }
 }
-  // 4. OBTENER TODAS LAS RESERVAS
+  // =========================================================================
+  // 4. OBTENER TODAS LAS RESERVAS (GET /api/reservas)
+  // =========================================================================
   Future<Response> getAllReservas(Request request) async {
     try {
       final reservas = await mongoService.getAllReservas();
@@ -255,7 +285,9 @@ Future<Response> getReservasByUsuario(Request request) async {
     }
   }
 
-  // 5. CANCELAR RESERVA
+  // =========================================================================
+  // 5. CANCELAR RESERVA (PUT /api/reservas/{id}/cancelar)
+  // =========================================================================
 Future<Response> cancelarReserva(Request request) async {
   try {
     final parts = request.url.pathSegments;

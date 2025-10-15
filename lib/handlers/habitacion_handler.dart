@@ -97,7 +97,7 @@ class HabitacionHandler {
       // Transformar los datos para que el frontend los entienda
       final habitacionesTransformadas = habitaciones.map((hab) {
         return {
-          'id': hab['_id'].toString(),
+          'idHabitacion': hab['_id'].toString(),
           'nombre': hab['NombreHab'],
           'descripcion': hab['Descripcion'],
           'precio': hab['PrecioDia'],

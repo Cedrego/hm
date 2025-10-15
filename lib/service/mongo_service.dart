@@ -196,6 +196,28 @@ class MongoService {
     }
   }
 
+  Future<Map<String, dynamic>?> findHabitacionByMongoId(String mongoId) async {
+    try {
+      print('🔍 Buscando habitación por ID de MongoDB: $mongoId');
+      final collection = db.collection('habitaciones');
+      
+      // Convertir el String a ObjectId para la búsqueda
+      final objectId = ObjectId.parse(mongoId); 
+      
+      final habitacion = await collection.findOne(where.id(objectId));
+      
+      if (habitacion != null) {
+        print('✅ Habitación encontrada: ${habitacion['NombreHab']}');
+      } else {
+        print('⚠️ No se encontró habitación con ID de MongoDB: $mongoId');
+      }
+      
+      return habitacion;
+    } catch (e) {
+      print('❌ Error al buscar habitación por ID de MongoDB: $e');
+      return null;
+    }
+  }
 
   // Actualizar habitación
   Future<bool> updateHabitacion(String id, Map<String, dynamic> updates) async {
