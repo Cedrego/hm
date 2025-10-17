@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "103969422555",
+    "project_id": "hostel-mochileros",
+    "storage_bucket": "hostel-mochileros.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:103969422555:android:41059614e32010d76c60fe",
+        "android_client_info": {
+          "package_name": "com.example.hm"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAydAH9QJjGhBSqfqcA7mCy7J0RAPoXiBY"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

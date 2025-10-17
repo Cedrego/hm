@@ -7,7 +7,8 @@ class AuthService {
   static const String _userDataKey = 'userData';
   static const String _userIdKey = 'userId';
   static const String _userEmailKey = 'userEmail';
-  static const String _userRolKey = 'userRol'; // ← NUEVO
+  static const String _userRolKey = 'userRol';
+  static const String _userNameKey = 'userName';
 
   // Verificar si el usuario está logueado
   static Future<bool> isLoggedIn() async {
@@ -23,7 +24,8 @@ class AuthService {
     await prefs.setString(_userDataKey, jsonEncode(userData));
     await prefs.setString(_userIdKey, userData['id'] ?? '');
     await prefs.setString(_userEmailKey, userData['email'] ?? '');
-    await prefs.setString(_userRolKey, userData['rol'] ?? 'invitado'); // ← NUEVO
+    await prefs.setString(_userNameKey, userData['nombre'] ?? '');
+    await prefs.setString(_userRolKey, userData['rol'] ?? 'invitado');
     
     print('✅ Sesión guardada: ${userData['email']} - Rol: ${userData['rol']}');
   }
@@ -51,22 +53,39 @@ class AuthService {
     return prefs.getString(_userEmailKey);
   }
 
-  // ← NUEVO: Obtener rol del usuario actual
+  // Obtener nombre del usuario actual
+  static Future<String?> getUserName() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getString(_userNameKey);
+  }
+
+  // Obtener rol del usuario actual
   static Future<String> getUserRol() async {
     final prefs = await SharedPreferences.getInstance();
     return prefs.getString(_userRolKey) ?? 'invitado';
   }
 
-  // ← NUEVO: Verificar si el usuario es admin
+  // Verificar si el usuario es admin
   static Future<bool> isAdmin() async {
     final rol = await getUserRol();
     return rol == 'admin';
   }
 
-  // ← NUEVO: Verificar si el usuario es invitado
+  // Verificar si el usuario es invitado
   static Future<bool> isInvitado() async {
     final rol = await getUserRol();
     return rol == 'invitado';
+  }
+
+  // Obtener todos los datos básicos del usuario rápidamente
+  static Future<Map<String, String>> getUserBasicInfo() async {
+    final prefs = await SharedPreferences.getInstance();
+    return {
+      'id': prefs.getString(_userIdKey) ?? '',
+      'email': prefs.getString(_userEmailKey) ?? '',
+      'nombre': prefs.getString(_userNameKey) ?? '',
+      'rol': prefs.getString(_userRolKey) ?? 'invitado',
+    };
   }
 
   // Cerrar sesión
@@ -77,12 +96,13 @@ class AuthService {
     await prefs.remove(_userDataKey);
     await prefs.remove(_userIdKey);
     await prefs.remove(_userEmailKey);
-    await prefs.remove(_userRolKey); // ← NUEVO
+    await prefs.remove(_userNameKey);
+    await prefs.remove(_userRolKey);
     
     print('✅ Sesión cerrada');
   }
 
-  // Limpiar todos los datos (útil para desarrollo)
+  // Limpiar todos los datos
   static Future<void> clearAll() async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.clear();

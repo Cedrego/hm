@@ -6,7 +6,8 @@ import 'package:flutter/services.dart';
 
 import '../../core/app_export.dart';
 import '../../widgets/register_form_container.dart';
-import '../../core/api_service.dart';
+import '../../core/firebase_service.dart';
+import '../../core/auth_service.dart';
 
 class RegistrationScreen extends StatefulWidget {
   const RegistrationScreen({super.key});
@@ -20,10 +21,12 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
   final TextEditingController nameController = TextEditingController();
   final TextEditingController documentController = TextEditingController();
   final TextEditingController passwordController = TextEditingController();
-  final TextEditingController confirmPasswordController = TextEditingController();
+  final TextEditingController confirmPasswordController =
+      TextEditingController();
   final TextEditingController contactController = TextEditingController();
 
   final GlobalKey<FormState> formKey = GlobalKey<FormState>();
+  final FirebaseService _firebaseService = FirebaseService();
   bool _isLoading = false;
 
   // Imagen
@@ -44,8 +47,8 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
 
   Future<void> _seleccionarImagen() async {
     try {
-      print('📷 Seleccionando imagen...'); // DEBUG
-      
+      print('📷 Seleccionando imagen...');
+
       final pickedFile = await _picker.pickImage(
         source: ImageSource.gallery,
         maxWidth: 1200,
@@ -59,14 +62,14 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
           _imagenFile = File(pickedFile.path);
           _imagenBase64 = base64Encode(bytes);
         });
-        
-        print('✅ Imagen seleccionada: ${bytes.length} bytes'); // DEBUG
+
+        print('✅ Imagen seleccionada: ${bytes.length} bytes');
       } else {
-        print('⚠️ No se seleccionó ninguna imagen'); // DEBUG
+        print('⚠️ No se seleccionó ninguna imagen');
       }
     } catch (e) {
-      print('❌ Error al seleccionar imagen: $e'); // DEBUG
-      
+      print('❌ Error al seleccionar imagen: $e');
+
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -192,7 +195,7 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
                         }
                         return null;
                       },
-                    ),                   
+                    ),
                   ],
                 ),
                 // Widget para seleccionar imagen + vista previa
@@ -247,7 +250,9 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
                     SizedBox(
                       width: 500.h,
                       child: ElevatedButton(
-                        onPressed: _isLoading ? null : () => _onRegistroPressed(context),
+                        onPressed: _isLoading
+                            ? null
+                            : () => _onRegistroPressed(context),
                         style: ElevatedButton.styleFrom(
                           backgroundColor: appTheme.blueGray900,
                           foregroundColor: appTheme.gray100,
@@ -271,7 +276,9 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
                                 width: 20.h,
                                 child: CircularProgressIndicator(
                                   strokeWidth: 2,
-                                  valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                                  valueColor: AlwaysStoppedAnimation<Color>(
+                                    Colors.white,
+                                  ),
                                 ),
                               )
                             : Text(
@@ -321,22 +328,22 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
   }
 
   Future<void> _onRegistroPressed(BuildContext context) async {
-    print('🔵 BOTÓN DE REGISTRO PRESIONADO'); // DEBUG
-    
+    print('🔵 BOTÓN DE REGISTRO PRESIONADO');
+
     // Validar el formulario
     if (!(formKey.currentState?.validate() ?? false)) {
-      print('❌ Validación del formulario falló'); // DEBUG
+      print('❌ Validación del formulario falló');
       return;
     }
-    
-    print('✅ Validación del formulario exitosa'); // DEBUG
+
+    print('✅ Validación del formulario exitosa');
 
     // Mostrar indicador de carga
     setState(() {
       _isLoading = true;
     });
-    
-    print('⏳ Indicador de carga activado'); // DEBUG
+
+    print('⏳ Indicador de carga activado');
 
     try {
       // Preparar datos para enviar, incluye la imagen base64 si existe
@@ -346,24 +353,31 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
         'documento': documentController.text.trim(),
         'password': passwordController.text,
         'contacto': contactController.text.trim(),
-        'imagen': _imagenBase64 ?? 'vacio', // aquí se envía la imagen
+        'imagen': _imagenBase64,
+        'rol': 'huesped',
       };
 
-      print('📦 Datos preparados para enviar:'); // DEBUG
-      print('   Email: ${datos['email']}'); // DEBUG
-      print('   Nombre: ${datos['nombre']}'); // DEBUG
-      print('   Tiene imagen: ${_imagenBase64 != null ? "SÍ" : "NO"}'); // DEBUG
+      print('📦 Datos preparados para enviar:');
+      print('   Email: ${datos['email']}');
+      print('   Nombre: ${datos['nombre']}');
+      print('   Tiene imagen: ${_imagenBase64 != null ? "SÍ" : "NO"}');
 
-      // Llamar al API de registro
-      print('🌐 Llamando a ApiService.registro()...'); // DEBUG
-      final response = await ApiService.registro(datos);
-      
-      print('📥 Respuesta recibida: $response'); // DEBUG
+      // ✅ LLAMAR A FIREBASE SERVICE EN LUGAR DE API SERVICE
+      print('🔥 Llamando a FirebaseService.registro()...');
+      final response = await _firebaseService.registro(datos);
+
+      print('📥 Respuesta recibida: $response');
 
       // Verificar que el registro fue exitoso
       if (response['success'] == true) {
-        print('✅ Registro exitoso!'); // DEBUG
-        
+        print('✅ Registro exitoso!');
+
+        // ✅ GUARDAR SESIÓN AUTOMÁTICAMENTE (LOGIN DESPUÉS DE REGISTRO)
+        if (response['usuario'] != null) {
+          await AuthService.saveUserSession(response['usuario']);
+          print('✅ Sesión guardada automáticamente');
+        }
+
         // Limpiar formulario
         _clearForm();
 
@@ -371,28 +385,34 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: Text(response['message'] ?? 'Usuario registrado exitosamente'),
+              content: Text(
+                response['message'] ?? 'Usuario registrado exitosamente',
+              ),
               backgroundColor: Colors.green,
               duration: Duration(seconds: 2),
             ),
           );
 
-          print('✅ SnackBar de éxito mostrado'); // DEBUG
+          print('✅ SnackBar de éxito mostrado');
 
-          // Volver a la pantalla de login después de un breve delay
+          // ✅ NAVEGAR DIRECTAMENTE AL HOME (YA ESTÁ LOGUEADO)
           await Future.delayed(Duration(seconds: 1));
           if (mounted) {
-            print('⬅️ Navegando de vuelta al login'); // DEBUG
-            Navigator.pop(context);
+            print('🏠 Navegando a MainPage (ya logueado)');
+            Navigator.pushNamedAndRemoveUntil(
+              context,
+              AppRoutes.mainPage,
+              (route) => false,
+            );
           }
         }
       } else {
-        print('⚠️ Registro falló: ${response['message']}'); // DEBUG
+        print('⚠️ Registro falló: ${response['message']}');
         throw Exception(response['message'] ?? 'Error desconocido');
       }
     } catch (e) {
-      print('❌ ERROR EN REGISTRO: $e'); // DEBUG
-      
+      print('❌ ERROR EN REGISTRO: $e');
+
       // Mostrar error
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -402,8 +422,8 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
             duration: Duration(seconds: 3),
           ),
         );
-        
-        print('❌ SnackBar de error mostrado'); // DEBUG
+
+        print('❌ SnackBar de error mostrado');
       }
     } finally {
       // Ocultar indicador de carga
@@ -411,9 +431,9 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
         setState(() {
           _isLoading = false;
         });
-        print('⏳ Indicador de carga desactivado'); // DEBUG
+        print('⏳ Indicador de carga desactivado');
       }
-      }
+    }
   }
 
   void _clearForm() {
@@ -423,13 +443,13 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
     passwordController.clear();
     confirmPasswordController.clear();
     contactController.clear();
-    
+
     // Limpiar imagen
     setState(() {
       _imagenFile = null;
       _imagenBase64 = null;
     });
-    
-    print('🧹 Formulario limpiado'); // DEBUG
+
+    print('🧹 Formulario limpiado');
   }
 }

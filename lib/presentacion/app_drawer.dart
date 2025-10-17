@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
-import 'dart:convert';
-import 'dart:typed_data';
-import '../core/app_export.dart'; // Ajusta esta ruta si es necesario
+import 'package:cached_network_image/cached_network_image.dart';
+import '../core/app_export.dart';
 
 class AppDrawer extends StatelessWidget {
   final Map<String, dynamic>? userData;
@@ -15,38 +14,28 @@ class AppDrawer extends StatelessWidget {
     required this.onLogoutPressed,
   });
 
-  // Método para construir el avatar con la imagen
   Widget _buildAvatar() {
-    final String? imagenBase64 = userData?['imagen'];
+    final String? imagenUrl = userData?['imagenUrl'];
     
     // Si no hay imagen o es "vacio"
-    if (imagenBase64 == null || 
-        imagenBase64.isEmpty || 
-        imagenBase64 == 'vacio') {
-      return const CircleAvatar(
-        radius: 30,
-        backgroundColor: Colors.white,
-        child: Icon(Icons.person, size: 40, color: Colors.blue),
-      );
-    }
-
-    // Si hay imagen, decodificar y mostrar
-    try {
-      Uint8List bytes = base64Decode(imagenBase64);
+    if (imagenUrl == null || imagenUrl.isEmpty || imagenUrl == 'vacio') {
       return CircleAvatar(
         radius: 30,
         backgroundColor: Colors.white,
-        backgroundImage: MemoryImage(bytes),
-      );
-    } catch (e) {
-      print('❌ Error al decodificar imagen del usuario: $e');
-      // Si hay error, mostrar avatar por defecto
-      return const CircleAvatar(
-        radius: 30,
-        backgroundColor: Colors.white,
-        child: Icon(Icons.person, size: 40, color: Colors.blue),
+        child: Icon(
+          Icons.person, 
+          size: 30, 
+          color: Colors.blue[700],
+        ),
       );
     }
+
+    // ✅ SI HAY IMAGEN URL - Usar CachedNetworkImage
+    return CircleAvatar(
+      radius: 30,
+      backgroundColor: Colors.white,
+      backgroundImage: CachedNetworkImageProvider(imagenUrl),
+    );
   }
 
   @override
@@ -54,7 +43,7 @@ class AppDrawer extends StatelessWidget {
     // Rutas (usando las constantes de AppRoutes y las rutas fijas)
     final String roomListRoute = AppRoutes.roomListScreen;
     final String roomCreationRoute = AppRoutes.roomCreationScreen;
-    final String reservationsRoute = '/reservas';
+    final String reservationsRoute = AppRoutes.misReservas;
     final String profileRoute = AppRoutes.profileScreen;
     final String informationRoute = '/informacion';
 
@@ -63,41 +52,76 @@ class AppDrawer extends StatelessWidget {
         padding: EdgeInsets.zero,
         children: [
           DrawerHeader(
-            decoration: const BoxDecoration(
-              color: Colors.blue,
+            decoration: BoxDecoration(
+              color: Colors.blue[700],
             ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               mainAxisAlignment: MainAxisAlignment.end,
               children: [
-                  _buildAvatar(), // ← Aquí mostramos la imagen
-                const SizedBox(height: 10),
-                Text(
-                  userData?['nombre'] ?? 'Usuario',
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-                Text(
-                  userData?['email'] ?? '',
-                  style: const TextStyle(
-                    color: Colors.white70,
-                    fontSize: 14,
-                  ),
+                Row(
+                  children: [
+                    _buildAvatar(),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            userData?['nombre'] ?? 'Usuario',
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 18,
+                              fontWeight: FontWeight.bold,
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            userData?['email'] ?? '',
+                            style: TextStyle(
+                              color: Colors.white.withOpacity(0.8),
+                              fontSize: 14,
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                          const SizedBox(height: 4),
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 8,
+                              vertical: 2,
+                            ),
+                            decoration: BoxDecoration(
+                              color: Colors.white.withOpacity(0.2),
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: Text(
+                              (userData?['rol'] ?? 'usuario').toUpperCase(),
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 10,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
                 ),
               ],
             ),
           ),
           ListTile(
-              leading: const Icon(Icons.home),
-              title: const Text('Inicio'),
-              onTap: () {
-                Navigator.pop(context);
-                Navigator.pushNamed(context, '/main_page');
-              },
-            ),
+            leading: const Icon(Icons.home),
+            title: const Text('Inicio'),
+            onTap: () {
+              Navigator.pop(context);
+              Navigator.pushNamed(context, AppRoutes.mainPage);
+            },
+          ),
           ListTile(
             leading: const Icon(Icons.bed),
             title: const Text('Habitaciones'),
@@ -117,7 +141,7 @@ class AppDrawer extends StatelessWidget {
             ),
           ListTile(
             leading: const Icon(Icons.calendar_today),
-            title: const Text('Reservas'),
+            title: const Text('Mis Reservas'),
             onTap: () {
               Navigator.pop(context);
               Navigator.pushNamed(context, reservationsRoute);
@@ -128,7 +152,6 @@ class AppDrawer extends StatelessWidget {
             title: const Text('Mi Perfil'),
             onTap: () {
               Navigator.pop(context);
-              // Pasa el userData
               Navigator.pushNamed(context, profileRoute, arguments: userData); 
             },
           ),
@@ -143,13 +166,15 @@ class AppDrawer extends StatelessWidget {
           const Divider(),
           ListTile(
             leading: const Icon(Icons.logout, color: Colors.red),
-            title: const Text('Cerrar Sesión', style: TextStyle(color: Colors.red)),
+            title: const Text(
+              'Cerrar Sesión', 
+              style: TextStyle(color: Colors.red)
+            ),
             onTap: () {
               Navigator.pop(context);
-              onLogoutPressed(context); // Llama al método de cierre de sesión
+              onLogoutPressed(context);
             },
           ),
-        
         ],
       ),
     );

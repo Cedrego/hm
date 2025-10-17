@@ -3,7 +3,7 @@ import 'package:flutter/services.dart';
 
 import '../../core/app_export.dart';
 import '../../widgets/register_form_container.dart';
-import '../../core/api_service.dart';
+import '../../core//firebase_service.dart';
 import '../../core/auth_service.dart';
 
 class LoginScreen extends StatefulWidget {
@@ -17,6 +17,8 @@ class _LoginScreenState extends State<LoginScreen> {
   final TextEditingController emailController = TextEditingController();
   final TextEditingController passwordController = TextEditingController();
   final GlobalKey<FormState> _formKey = GlobalKey<FormState>();
+  final FirebaseService _firebaseService =
+      FirebaseService();
   bool _isLoading = false;
 
   @override
@@ -98,7 +100,9 @@ class _LoginScreenState extends State<LoginScreen> {
                               width: double.infinity,
                               constraints: BoxConstraints(maxWidth: 500.h),
                               child: ElevatedButton(
-                                onPressed: _isLoading ? null : () => _onLoginPressed(context),
+                                onPressed: _isLoading
+                                    ? null
+                                    : () => _onLoginPressed(context),
                                 style: ElevatedButton.styleFrom(
                                   backgroundColor: appTheme.blueGray900,
                                   foregroundColor: appTheme.gray100,
@@ -122,7 +126,10 @@ class _LoginScreenState extends State<LoginScreen> {
                                         width: 20.h,
                                         child: CircularProgressIndicator(
                                           strokeWidth: 2,
-                                          valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                                          valueColor:
+                                              AlwaysStoppedAnimation<Color>(
+                                                Colors.white,
+                                              ),
                                         ),
                                       )
                                     : Text(
@@ -210,8 +217,7 @@ class _LoginScreenState extends State<LoginScreen> {
     });
 
     try {
-      // Llamar al API de login
-      final response = await ApiService.login(
+      final response = await _firebaseService.login(
         emailController.text.trim(),
         passwordController.text,
       );
@@ -219,7 +225,7 @@ class _LoginScreenState extends State<LoginScreen> {
       // Verificar que la respuesta sea exitosa
       if (response['success'] == true && response['usuario'] != null) {
         final userData = response['usuario'];
-        
+
         // Guardar sesión del usuario
         await AuthService.saveUserSession(userData);
 
