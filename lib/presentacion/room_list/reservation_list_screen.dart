@@ -136,7 +136,7 @@ class _ReservationListScreenState extends State<ReservationListScreen> {
       drawer: AppDrawer(
         userData: _userData,
         isAdmin: _isAdmin,
-        onLogoutPressed: onLogoutPressed,
+        onLogoutPressed: () => onLogoutPressed(context),
       ),
       backgroundColor: const Color(0xFFF4F4F4),
       body: _isLoadingReservations

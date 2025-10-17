@@ -126,7 +126,7 @@ class _RoomListScreenState extends State<RoomListScreen> {
       drawer: AppDrawer(
         userData: _userData,
         isAdmin: _isAdmin,
-        onLogoutPressed: _onLogoutPressed,
+        onLogoutPressed: () => _onLogoutPressed(context),
       ),
       
       // La lógica del cuerpo se mantiene igual.

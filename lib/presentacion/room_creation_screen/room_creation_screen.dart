@@ -203,7 +203,7 @@ class _RoomCreationScreenState extends State<RoomCreationScreen> {
       drawer: AppDrawer(
         userData: _userData,
         isAdmin: _isAdmin,
-        onLogoutPressed: _onLogoutPressed,
+        onLogoutPressed: () => _onLogoutPressed(context),
       ),
       
       body: SingleChildScrollView(

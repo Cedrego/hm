@@ -85,7 +85,7 @@ class _RoomDetailScreenState extends State<RoomDetailScreen> {
       drawer: AppDrawer(
         userData: _userData,
         isAdmin: _isAdmin,
-        onLogoutPressed: onLogoutPressed,
+        onLogoutPressed: () => onLogoutPressed(context),
       ),
       body: Stack(
         children: [

@@ -76,7 +76,7 @@ class ProfileScreen extends StatelessWidget {
       drawer: AppDrawer(
         userData: userData,
         isAdmin: isAdmin,
-        onLogoutPressed: _onLogoutPressed,
+        onLogoutPressed: () => _onLogoutPressed(context),
       ),
       body: Padding(
         padding: const EdgeInsets.all(16.0),

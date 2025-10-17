@@ -43,20 +43,48 @@ class _MainPageState extends State<MainPage> {
     }
   }
 
+  Future<void> _onLogoutPressed() async {
+    // Verificar si el widget sigue montado
+    if (!mounted) return;
+    
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Confirmación'),
+        content: const Text('¿Está seguro de cerrar sesión?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancelar'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            style: TextButton.styleFrom(foregroundColor: Colors.red),
+            child: const Text('Cerrar sesión'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed == true && mounted) {
+      await AuthService.logout();
+      Navigator.pushNamedAndRemoveUntil(
+        context,
+        AppRoutes.loginScreen,
+        (route) => false,
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
-    final String roomListRoute = AppRoutes.roomListScreen;
-    final String roomCreationRoute = AppRoutes.roomCreationScreen;
-    final String MisreservationsRoute = AppRoutes.misReservas;
-    final String profileRoute = AppRoutes.profileScreen;
-    final String informationRoute = '/informacion';
     final bool isAdmin = _userData?['rol'] == 'admin';
 
     return Scaffold(
       key: _scaffoldKey,
       appBar: CustomAppBar(
         scaffoldKey: _scaffoldKey,
-        onLogoutPressed: () => _onLogoutPressed(context),
+        onLogoutPressed: _onLogoutPressed,
         userData: _userData,
         isAdmin: isAdmin,
       ),
@@ -104,7 +132,7 @@ class _MainPageState extends State<MainPage> {
                           title: 'Habitaciones',
                           color: Colors.blue,
                           onTap: () {
-                            Navigator.pushNamed(context, roomListRoute);
+                            Navigator.pushNamed(context, AppRoutes.roomListScreen);
                           },
                         ),
                         if (isAdmin)
@@ -113,7 +141,7 @@ class _MainPageState extends State<MainPage> {
                             title: 'Crear Habitación',
                             color: Colors.indigo,
                             onTap: () {
-                              Navigator.pushNamed(context, roomCreationRoute);
+                              Navigator.pushNamed(context, AppRoutes.roomCreationScreen);
                             },
                           ),
                         _buildFeatureCard(
@@ -121,7 +149,7 @@ class _MainPageState extends State<MainPage> {
                           title: 'Reservas',
                           color: Colors.green,
                           onTap: () {
-                            Navigator.pushNamed(context, MisreservationsRoute);
+                            Navigator.pushNamed(context, AppRoutes.misReservas);
                           },
                         ),
                         _buildFeatureCard(
@@ -129,16 +157,11 @@ class _MainPageState extends State<MainPage> {
                           title: 'Perfil',
                           color: Colors.orange,
                           onTap: () {
-                            // ✅ CORREGIDO: Pasar userData correctamente
                             if (_userData != null) {
                               Navigator.pushNamed(
                                 context, 
-                                profileRoute, 
+                                AppRoutes.profileScreen, 
                                 arguments: _userData,
-                              );
-                            } else {
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                SnackBar(content: Text('Error: Datos de usuario no disponibles')),
                               );
                             }
                           },
@@ -148,7 +171,7 @@ class _MainPageState extends State<MainPage> {
                           title: 'Información',
                           color: Colors.purple,
                           onTap: () {
-                            Navigator.pushNamed(context, informationRoute);
+                            Navigator.pushNamed(context, '/informacion');
                           },
                         ),
                       ],
@@ -200,35 +223,5 @@ class _MainPageState extends State<MainPage> {
         ),
       ),
     );
-  }
-
-  Future<void> _onLogoutPressed(BuildContext context) async {
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Confirmación'),
-        content: const Text('¿Está seguro de cerrar sesión?'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context, false),
-            child: const Text('Cancelar'),
-          ),
-          TextButton(
-            onPressed: () => Navigator.pop(context, true),
-            style: TextButton.styleFrom(foregroundColor: Colors.red),
-            child: const Text('Cerrar sesión'),
-          ),
-        ],
-      ),
-    );
-
-    if (confirmed == true && mounted) {
-      await AuthService.logout();
-      Navigator.pushNamedAndRemoveUntil(
-        context,
-        AppRoutes.loginScreen,
-        (route) => false,
-      );
-    }
   }
 }

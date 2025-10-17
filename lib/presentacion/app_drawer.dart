@@ -5,7 +5,7 @@ import '../core/app_export.dart';
 class AppDrawer extends StatelessWidget {
   final Map<String, dynamic>? userData;
   final bool isAdmin;
-  final Function(BuildContext) onLogoutPressed;
+  final VoidCallback onLogoutPressed;
 
   const AppDrawer({
     super.key,
@@ -17,7 +17,6 @@ class AppDrawer extends StatelessWidget {
   Widget _buildAvatar() {
     final String? imagenUrl = userData?['imagenUrl'];
     
-    // Si no hay imagen o es "vacio"
     if (imagenUrl == null || imagenUrl.isEmpty || imagenUrl == 'vacio') {
       return CircleAvatar(
         radius: 30,
@@ -30,7 +29,6 @@ class AppDrawer extends StatelessWidget {
       );
     }
 
-    // ✅ SI HAY IMAGEN URL - Usar CachedNetworkImage
     return CircleAvatar(
       radius: 30,
       backgroundColor: Colors.white,
@@ -40,13 +38,6 @@ class AppDrawer extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // Rutas (usando las constantes de AppRoutes y las rutas fijas)
-    final String roomListRoute = AppRoutes.roomListScreen;
-    final String roomCreationRoute = AppRoutes.roomCreationScreen;
-    final String reservationsRoute = AppRoutes.misReservas;
-    final String profileRoute = AppRoutes.profileScreen;
-    final String informationRoute = '/informacion';
-
     return Drawer(
       child: ListView(
         padding: EdgeInsets.zero,
@@ -127,7 +118,7 @@ class AppDrawer extends StatelessWidget {
             title: const Text('Habitaciones'),
             onTap: () {
               Navigator.pop(context);
-              Navigator.pushNamed(context, roomListRoute);
+              Navigator.pushNamed(context, AppRoutes.roomListScreen);
             },
           ),
           if (isAdmin)
@@ -136,7 +127,7 @@ class AppDrawer extends StatelessWidget {
               title: const Text('Crear Habitación'),
               onTap: () {
                 Navigator.pop(context);
-                Navigator.pushNamed(context, roomCreationRoute);
+                Navigator.pushNamed(context, AppRoutes.roomCreationScreen);
               },
             ),
           ListTile(
@@ -144,7 +135,7 @@ class AppDrawer extends StatelessWidget {
             title: const Text('Mis Reservas'),
             onTap: () {
               Navigator.pop(context);
-              Navigator.pushNamed(context, reservationsRoute);
+              Navigator.pushNamed(context, AppRoutes.misReservas);
             },
           ),
           ListTile(
@@ -152,7 +143,7 @@ class AppDrawer extends StatelessWidget {
             title: const Text('Mi Perfil'),
             onTap: () {
               Navigator.pop(context);
-              Navigator.pushNamed(context, profileRoute, arguments: userData); 
+              Navigator.pushNamed(context, AppRoutes.profileScreen, arguments: userData); 
             },
           ),
           ListTile(
@@ -160,7 +151,7 @@ class AppDrawer extends StatelessWidget {
             title: const Text('Información'),
             onTap: () {
               Navigator.pop(context);
-              Navigator.pushNamed(context, informationRoute);
+              Navigator.pushNamed(context, '/informacion');
             },
           ),
           const Divider(),
@@ -172,7 +163,7 @@ class AppDrawer extends StatelessWidget {
             ),
             onTap: () {
               Navigator.pop(context);
-              onLogoutPressed(context);
+              onLogoutPressed();
             },
           ),
         ],
