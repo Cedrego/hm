@@ -3,7 +3,6 @@ import 'package:hm/presentacion/main_page/main_page.dart';
 import '../presentacion/registration_screen/registration_screen.dart';
 import '../presentacion/login_screen/login_screen.dart';
 import '../presentacion/room_creation_screen/room_creation_screen.dart';
-import '../presentacion/app_navigation_screen/app_navigation_screen.dart';
 import '../presentacion/profile/profileScreen.dart';
 import '../presentacion/room_list/room_list_screen.dart';
 import '../presentacion/room_list/room_detail_screen.dart';
@@ -33,7 +32,6 @@ class AppRoutes {
     loginScreen: (context) => LoginScreen(),
     roomCreationScreen: (context) => const RoomCreationScreen(),
     mainPage: (context) => const MainPage(),
-    appNavigationScreen: (context) => const AppNavigationScreen(),
 
     profileScreen: (context) {
       final userData = ModalRoute.of(context)!.settings.arguments as Map<String, dynamic>? ?? {};
