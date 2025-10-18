@@ -177,10 +177,10 @@ class _MainPageState extends State<MainPage> {
             ),
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())
-          : Stack(
+          : Column(
               children: [
-                SafeArea(
-                  child: Padding(
+                Expanded(
+                  child: SingleChildScrollView(
                     padding: const EdgeInsets.symmetric(
                       horizontal: 20,
                       vertical: 20,
@@ -205,84 +205,99 @@ class _MainPageState extends State<MainPage> {
                             color: Colors.grey[600],
                           ),
                         ),
-
                         const SizedBox(height: 20),
-
-                        // ✅ TARJETAS DE FUNCIONALIDADES
-                        Expanded(
-                          child: GridView.count(
-                            crossAxisCount: 2,
-                            crossAxisSpacing: 16,
-                            mainAxisSpacing: 16,
-                            childAspectRatio: 1.0,
-                            children: [
-                              _buildFeatureCard(
-                                icon: Icons.bed,
-                                title: 'Habitaciones',
-                                color: Colors.blue,
-                                onTap: () {
-                                  Navigator.pushNamed(
-                                    context,
-                                    AppRoutes.roomListScreen,
-                                  );
-                                },
-                              ),
-                              if (isAdmin)
-                                _buildFeatureCard(
-                                  icon: Icons.add_box,
-                                  title: 'Crear Habitación',
-                                  color: Colors.indigo,
-                                  onTap: () {
-                                    Navigator.pushNamed(
-                                      context,
-                                      AppRoutes.roomCreationScreen,
-                                    );
-                                  },
-                                ),
-                              _buildFeatureCard(
-                                icon: Icons.calendar_today,
-                                title: 'Reservas',
-                                color: Colors.green,
-                                onTap: () {
-                                  Navigator.pushNamed(
-                                    context,
-                                    AppRoutes.misReservas,
-                                  );
-                                },
-                              ),
-                              _buildFeatureCard(
-                                icon: Icons.person,
-                                title: 'Perfil',
-                                color: Colors.orange,
-                                onTap: () {
-                                  if (_userData != null) {
-                                    Navigator.pushNamed(
-                                      context,
-                                      AppRoutes.profileScreen,
-                                      arguments: _userData,
-                                    );
-                                  }
-                                },
-                              ),
-                              // ❌ ELIMINADA: Tarjeta de Información
-                            ],
-                          ),
-                        ),
-
-                        // ✅ SECCIÓN HABITACIÓN POPULAR (SOLO PARA HUÉSPEDES) - DEBAJO DE LAS TARJETAS
+                        _buildFeatureCards(isAdmin: isAdmin),
                         if (isHuesped) ...[
-                          const SizedBox(height: 20),
+                          const SizedBox(height: 30),
                           _buildHabitacionPopularSection(),
-                        ],
-
-                        const SizedBox(height: 20),
+                          const SizedBox(height: 20),
+                        ] else
+                          const SizedBox(height: 20),
                       ],
                     ),
                   ),
                 ),
-                Positioned(left: 0, right: 0, bottom: 0, child: _buildFooter()),
+                _buildFooter(),
               ],
             ),
+    );
+  }
+
+  Widget _buildFeatureCards({required bool isAdmin}) {
+    final List<Widget> featureCards = [
+      _buildFeatureCard(
+        icon: Icons.bed,
+        title: 'Habitaciones',
+        color: Colors.blue,
+        onTap: () {
+          Navigator.pushNamed(context, AppRoutes.roomListScreen);
+        },
+      ),
+      if (isAdmin)
+        _buildFeatureCard(
+          icon: Icons.add_box,
+          title: 'Crear Habitación',
+          color: Colors.indigo,
+          onTap: () {
+            Navigator.pushNamed(context, AppRoutes.roomCreationScreen);
+          },
+        ),
+      _buildFeatureCard(
+        icon: Icons.calendar_today,
+        title: 'Reservas',
+        color: Colors.green,
+        onTap: () {
+          Navigator.pushNamed(context, AppRoutes.misReservas);
+        },
+      ),
+      _buildFeatureCard(
+        icon: Icons.person,
+        title: 'Perfil',
+        color: Colors.orange,
+        onTap: () {
+          if (_userData != null) {
+            Navigator.pushNamed(
+              context,
+              AppRoutes.profileScreen,
+              arguments: _userData,
+            );
+          }
+        },
+      ),
+    ];
+
+    if (!isAdmin) {
+      return Column(
+        children: [
+          Row(
+            children: [
+              Expanded(child: featureCards[0]),
+              const SizedBox(width: 16),
+              Expanded(child: featureCards[1]),
+            ],
+          ),
+          const SizedBox(height: 16),
+          Container(
+            width: double.infinity,
+            child: Center(
+              child: SizedBox(
+                width: MediaQuery.of(context).size.width / 2 - 20,
+                child: featureCards[2],
+              ),
+            ),
+          ),
+        ],
+      );
+    }
+
+    return GridView.count(
+      crossAxisCount: 2,
+      crossAxisSpacing: 16,
+      mainAxisSpacing: 16,
+      childAspectRatio: 1.0,
+      shrinkWrap: true,
+      physics: const NeverScrollableScrollPhysics(),
+      children: featureCards,
     );
   }
 
