@@ -146,14 +146,6 @@ class AppDrawer extends StatelessWidget {
               Navigator.pushNamed(context, AppRoutes.profileScreen, arguments: userData); 
             },
           ),
-          ListTile(
-            leading: const Icon(Icons.info),
-            title: const Text('Información'),
-            onTap: () {
-              Navigator.pop(context);
-              Navigator.pushNamed(context, '/informacion');
-            },
-          ),
           const Divider(),
           ListTile(
             leading: const Icon(Icons.logout, color: Colors.red),

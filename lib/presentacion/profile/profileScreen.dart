@@ -13,46 +13,63 @@ class ProfileScreen extends StatelessWidget {
 
   Widget _buildAvatar() {
     final String? imagenUrl = userData['imagenUrl'];
-    
-    // Si no hay imagen o es "vacio"
+
     if (imagenUrl == null || imagenUrl.isEmpty || imagenUrl == 'vacio') {
-      return CircleAvatar(
-        radius: 70,
-        backgroundColor: Colors.grey[200],
-        child: Icon(Icons.person, size: 50, color: Colors.grey[600]),
+      return Container(
+        width: 140,
+        height: 140,
+        decoration: BoxDecoration(
+          shape: BoxShape.circle,
+          color: Colors.grey[100],
+          border: Border.all(color: Color(0xFF00897B), width: 3),
+        ),
+        child: Icon(Icons.person, size: 60, color: Color(0xFF00897B)),
       );
     }
 
-    // ✅ SI HAY IMAGEN URL - Usar CachedNetworkImage
-    return CircleAvatar(
-      radius: 70,
-      backgroundColor: Colors.grey[200],
-      backgroundImage: CachedNetworkImageProvider(imagenUrl),
+    return Container(
+      width: 140,
+      height: 140,
+      decoration: BoxDecoration(
+        shape: BoxShape.circle,
+        border: Border.all(color: Color(0xFF00897B), width: 3),
+      ),
+      child: CircleAvatar(
+        backgroundColor: Colors.transparent,
+        backgroundImage: CachedNetworkImageProvider(imagenUrl),
+      ),
     );
   }
-  
+
   Future<void> _onLogoutPressed(BuildContext context) async {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Confirmación'),
-        content: const Text('¿Está seguro de cerrar sesión?'),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: const Text(
+          'Confirmar cierre de sesión',
+          style: TextStyle(fontWeight: FontWeight.bold),
+        ),
+        content: const Text('¿Está seguro de que desea cerrar sesión?'),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
-            child: const Text('Cancelar'),
+            child: const Text('Cancelar', style: TextStyle(color: Colors.grey)),
           ),
-          TextButton(
+          ElevatedButton(
             onPressed: () => Navigator.pop(context, true),
-            style: TextButton.styleFrom(foregroundColor: Colors.red),
-            child: const Text('Cerrar sesión'),
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+            child: const Text(
+              'Cerrar sesión',
+              style: TextStyle(color: Colors.white),
+            ),
           ),
         ],
       ),
     );
 
     if (confirmed == true) {
-      await AuthService.logout(); 
+      await AuthService.logout();
       Navigator.pushNamedAndRemoveUntil(
         context,
         AppRoutes.loginScreen,
@@ -60,7 +77,12 @@ class ProfileScreen extends StatelessWidget {
       );
     }
   }
-  
+
+  String _formatearRol(String rol) {
+    if (rol.isEmpty) return 'Huesped';
+    return rol[0].toUpperCase() + rol.substring(1);
+  }
+
   @override
   Widget build(BuildContext context) {
     final bool isAdmin = userData['rol'] == 'admin';
@@ -78,49 +100,106 @@ class ProfileScreen extends StatelessWidget {
         isAdmin: isAdmin,
         onLogoutPressed: () => _onLogoutPressed(context),
       ),
-      body: Padding(
-        padding: const EdgeInsets.all(16.0),
+      body: SingleChildScrollView(
+        padding: const EdgeInsets.all(24),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.center,
           children: [
-            _buildAvatar(),
             const SizedBox(height: 20),
-            _buildProfileItem('Nombre', userData['nombre'] ?? 'N/A'),
-            _buildProfileItem('Email', userData['email'] ?? 'N/A'),
-            _buildProfileItem('Documento', userData['documento'] ?? 'N/A'),
-            _buildProfileItem('Contacto', userData['contacto'] ?? 'N/A'),
-            _buildProfileItem('Rol', userData['rol'] ?? 'usuario'), // ← AGREGADO
+            _buildAvatar(),
+            const SizedBox(height: 32),
+            Card(
+              elevation: 4,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(16),
+              ),
+              child: Padding(
+                padding: const EdgeInsets.all(24),
+                child: Column(
+                  children: [
+                    _buildProfileItem(
+                      Icons.person,
+                      'Nombre',
+                      userData['nombre'] ?? 'No especificado',
+                    ),
+                    const SizedBox(height: 20),
+                    _buildProfileItem(
+                      Icons.email,
+                      'Email',
+                      userData['email'] ?? 'No especificado',
+                    ),
+                    const SizedBox(height: 20),
+                    _buildProfileItem(
+                      Icons.badge,
+                      'Documento',
+                      userData['documento'] ?? 'No especificado',
+                    ),
+                    const SizedBox(height: 20),
+                    _buildProfileItem(
+                      Icons.phone,
+                      'Contacto',
+                      userData['contacto'] ?? 'No especificado',
+                    ),
+                    const SizedBox(height: 20),
+                    _buildProfileItem(
+                      Icons.security,
+                      'Rol',
+                      _formatearRol(userData['rol'] ?? 'huesped'),
+                    ),
+                  ],
+                ),
+              ),
+            ),
           ],
         ),
       ),
     );
   }
 
-  Widget _buildProfileItem(String label, String value) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 8.0),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            label,
-            style: const TextStyle(
-              fontSize: 14,
-              color: Colors.grey,
-              fontWeight: FontWeight.bold,
-            ),
+  Widget _buildProfileItem(IconData icon, String label, String value) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Container(
+          padding: const EdgeInsets.all(8),
+          decoration: BoxDecoration(
+            color: Color(0xFF00897B).withOpacity(0.1),
+            shape: BoxShape.circle,
           ),
-          const SizedBox(height: 4),
-          Text(
-            value,
-            style: const TextStyle(
-              fontSize: 16,
-              color: Colors.black,
-            ),
+          child: Icon(icon, size: 20, color: Color(0xFF00897B)),
+        ),
+        const SizedBox(width: 16),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                label,
+                style: const TextStyle(
+                  fontSize: 14,
+                  color: Colors.grey,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+              const SizedBox(height: 4),
+              Container(
+                padding: const EdgeInsets.symmetric(
+                  vertical: 12,
+                  horizontal: 0,
+                ),
+                child: Text(
+                  value,
+                  style: const TextStyle(
+                    fontSize: 16,
+                    color: Colors.black87,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ),
+            ],
           ),
-          const Divider(),
-        ],
-      ),
+        ),
+      ],
     );
   }
 }

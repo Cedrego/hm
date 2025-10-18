@@ -227,7 +227,11 @@ class _MisReservasScreenState extends State<MisReservasScreen> {
               const SizedBox(height: 32),
               ElevatedButton.icon(
                 onPressed: () {
-                  Navigator.pop(context);
+                  Navigator.pushNamedAndRemoveUntil(
+                    context,
+                    AppRoutes.roomListScreen,
+                    (route) => true,
+                  );
                 },
                 icon: const Icon(Icons.hotel),
                 label: const Text('Ver Habitaciones'),

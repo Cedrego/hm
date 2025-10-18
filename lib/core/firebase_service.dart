@@ -285,6 +285,24 @@ class FirebaseService {
     });
   }
 
+  // MÉTODO PARA OBTENER TODAS LAS RESERVAS (Habitacion mas popular)
+  Future<List<Map<String, dynamic>>> getTodasLasReservas() async {
+    try {
+      final querySnapshot = await _firestore
+          .collection('reservas')
+          .where('estado', isEqualTo: 'activa')
+          .get();
+
+      return querySnapshot.docs.map((doc) {
+        final data = doc.data();
+        return {'id': doc.id, ...data};
+      }).toList();
+    } catch (e) {
+      print('Error obteniendo reservas: $e');
+      return [];
+    }
+  }
+
   // =========================================================================
   // 🖼️ MÉTODOS PRIVADOS - CLOUDINARY
   // =========================================================================
