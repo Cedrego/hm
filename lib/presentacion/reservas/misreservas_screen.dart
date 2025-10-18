@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
-import '../../core/api_service.dart';
+import 'package:cached_network_image/cached_network_image.dart';
+import '../../core/firebase_service.dart';
 import '../../core/auth_service.dart';
-import '../../routes/app_routes.dart'; 
-
+import '../../routes/app_routes.dart';
 
 class MisReservasScreen extends StatefulWidget {
   const MisReservasScreen({super.key});
@@ -12,6 +12,7 @@ class MisReservasScreen extends StatefulWidget {
 }
 
 class _MisReservasScreenState extends State<MisReservasScreen> {
+  final FirebaseService _firebaseService = FirebaseService();
   List<Map<String, dynamic>> reservas = [];
   bool isLoading = true;
   String errorMessage = '';
@@ -29,30 +30,39 @@ class _MisReservasScreenState extends State<MisReservasScreen> {
     });
 
     try {
-      // Obtener ID del usuario logueado
       final userId = await AuthService.getUserId();
-      
+
       if (userId == null || userId.isEmpty) {
         throw Exception('Usuario no autenticado');
       }
 
-      print('🔍 Cargando reservas para usuario: $userId');
-      
-      // Llamar al API para obtener reservas
-      final data = await ApiService.getReservasUsuario(userId);
-      
-      setState(() {
-        reservas = data.map((e) => e as Map<String, dynamic>).toList();
-        isLoading = false;
-      });
-      
-      print('✅ Cargadas ${reservas.length} reservas');
+      _firebaseService
+          .getReservasPorUsuario(userId)
+          .listen(
+            (listaReservas) {
+              if (mounted) {
+                setState(() {
+                  reservas = listaReservas;
+                  isLoading = false;
+                });
+              }
+            },
+            onError: (error) {
+              if (mounted) {
+                setState(() {
+                  errorMessage = error.toString();
+                  isLoading = false;
+                });
+              }
+            },
+          );
     } catch (e) {
-      print('❌ Error cargando reservas: $e');
-      setState(() {
-        errorMessage = e.toString();
-        isLoading = false;
-      });
+      if (mounted) {
+        setState(() {
+          errorMessage = e.toString();
+          isLoading = false;
+        });
+      }
     }
   }
 
@@ -71,6 +81,7 @@ class _MisReservasScreenState extends State<MisReservasScreen> {
 
   Color _getEstadoColor(String estado) {
     switch (estado.toLowerCase()) {
+      case 'activa':
       case 'confirmada':
         return Colors.green;
       case 'cancelada':
@@ -81,17 +92,14 @@ class _MisReservasScreenState extends State<MisReservasScreen> {
         return Colors.grey;
     }
   }
-  // --- FUNCIÓN CLAVE ACTUALIZADA ---
+
   void _verDetallesReserva(Map<String, dynamic> reserva) {
-    // Utilizamos Navigator.pushNamed y pasamos el objeto 'reserva' como argumento.
-    // AppRoutes se encarga de extraerlo y pasarlo al constructor de ReservaDetalleScreen.
     Navigator.pushNamed(
       context,
       AppRoutes.misReservasDetalle,
-      arguments: reserva, // Pasando la reserva como argumento
+      arguments: reserva,
     );
   }
-  // ---------------------------------
 
   @override
   Widget build(BuildContext context) {
@@ -106,7 +114,11 @@ class _MisReservasScreenState extends State<MisReservasScreen> {
         ),
         title: const Text(
           'Mis Reservas',
-          style: TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.bold),
+          style: TextStyle(
+            color: Colors.white,
+            fontSize: 20,
+            fontWeight: FontWeight.bold,
+          ),
         ),
         actions: [
           IconButton(
@@ -136,7 +148,6 @@ class _MisReservasScreenState extends State<MisReservasScreen> {
   }
 
   Widget _buildBody() {
-    // Mientras carga
     if (isLoading) {
       return const Center(
         child: Column(
@@ -150,7 +161,6 @@ class _MisReservasScreenState extends State<MisReservasScreen> {
       );
     }
 
-    // Si hay error
     if (errorMessage.isNotEmpty) {
       return Center(
         child: Padding(
@@ -178,7 +188,10 @@ class _MisReservasScreenState extends State<MisReservasScreen> {
                 style: ElevatedButton.styleFrom(
                   backgroundColor: const Color(0xFF00897B),
                   foregroundColor: Colors.white,
-                  padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 12),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 32,
+                    vertical: 12,
+                  ),
                 ),
               ),
             ],
@@ -187,7 +200,6 @@ class _MisReservasScreenState extends State<MisReservasScreen> {
       );
     }
 
-    // Si no hay reservas
     if (reservas.isEmpty) {
       return Center(
         child: Padding(
@@ -209,23 +221,23 @@ class _MisReservasScreenState extends State<MisReservasScreen> {
               const SizedBox(height: 12),
               Text(
                 'Explora nuestras habitaciones y realiza tu primera reserva',
-                style: TextStyle(
-                  fontSize: 16,
-                  color: Colors.grey[600],
-                ),
+                style: TextStyle(fontSize: 16, color: Colors.grey[600]),
                 textAlign: TextAlign.center,
               ),
               const SizedBox(height: 32),
               ElevatedButton.icon(
                 onPressed: () {
-                  Navigator.pop(context); // Volver a la lista de habitaciones
+                  Navigator.pop(context);
                 },
                 icon: const Icon(Icons.hotel),
                 label: const Text('Ver Habitaciones'),
                 style: ElevatedButton.styleFrom(
                   backgroundColor: const Color(0xFF00897B),
                   foregroundColor: Colors.white,
-                  padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 16),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 32,
+                    vertical: 16,
+                  ),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(12),
                   ),
@@ -237,7 +249,6 @@ class _MisReservasScreenState extends State<MisReservasScreen> {
       );
     }
 
-    // Mostrar lista de reservas
     return RefreshIndicator(
       onRefresh: _cargarReservas,
       color: const Color(0xFF00897B),
@@ -252,269 +263,292 @@ class _MisReservasScreenState extends State<MisReservasScreen> {
     );
   }
 
+  // AGREGAR ESTE MÉTODO PARA OBTENER DATOS DE LA HABITACIÓN
+  Future<Map<String, dynamic>?> _obtenerDatosHabitacion(
+    String habitacionId,
+  ) async {
+    try {
+      final doc = await _firebaseService.getHabitacionPorId(habitacionId);
+      return doc;
+    } catch (e) {
+      print('Error obteniendo datos de habitación $habitacionId: $e');
+      return null;
+    }
+  }
+
+  // ACTUALIZAR EL MÉTODO _buildReservaCard
   Widget _buildReservaCard(Map<String, dynamic> reserva) {
-    final habitacion = reserva['habitacion'] as Map<String, dynamic>?;
-    final String nombreHab = habitacion?['nombre'] ?? 'Habitación';
-    final String imagenUrl = habitacion?['imagen'] ?? '';
-    final List<dynamic> servicios = habitacion?['servicios'] ?? [];
-    final String estado = reserva['estado'] ?? 'Confirmada';
-    final double precioTotal = (reserva['precioTotal'] ?? 0).toDouble();
-    final int diasEstadia = reserva['diasEstadia'] ?? 0;
+    final String habitacionId = reserva['idHabitacion'] ?? '';
+    final String estado = reserva['estado'] ?? 'activa';
+    final String fechaCheckIn = reserva['fechaCheckIn'] ?? '';
+    final String fechaCheckOut = reserva['fechaCheckOut'] ?? '';
 
-    return Card(
-      margin: const EdgeInsets.only(bottom: 16),
-      elevation: 3,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(16),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // Imagen de la habitación
-          if (imagenUrl.isNotEmpty)
-            ClipRRect(
-              borderRadius: const BorderRadius.only(
-                topLeft: Radius.circular(16),
-                topRight: Radius.circular(16),
-              ),
-              child: Stack(
-                children: [
-                  Image.network(
-                    imagenUrl,
-                    height: 160,
-                    width: double.infinity,
-                    fit: BoxFit.cover,
-                    errorBuilder: (context, error, stackTrace) {
-                      return Container(
-                        height: 160,
-                        color: Colors.grey[300],
-                        child: const Center(
-                          child: Icon(Icons.hotel, size: 60, color: Colors.grey),
-                        ),
-                      );
-                    },
-                  ),
-                  // Badge de estado
-                  Positioned(
-                    top: 12,
-                    right: 12,
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                      decoration: BoxDecoration(
-                        color: _getEstadoColor(estado),
-                        borderRadius: BorderRadius.circular(20),
-                      ),
-                      child: Text(
-                        estado,
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontSize: 12,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
+    return FutureBuilder<Map<String, dynamic>?>(
+      future: _obtenerDatosHabitacion(habitacionId),
+      builder: (context, snapshot) {
+        // Datos de la habitación
+        final String nombreHab = snapshot.data?['nombre'] ?? 'Cargando...';
+        final String imagenUrl = snapshot.data?['imagenUrl'] ?? '';
+        final bool isLoadingHabitacion =
+            snapshot.connectionState == ConnectionState.waiting;
 
-          // Información de la reserva
-          Padding(
-            padding: const EdgeInsets.all(16),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                // Nombre de la habitación
-                Text(
-                  nombreHab,
-                  style: const TextStyle(
-                    fontSize: 20,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.black87,
+        return Card(
+          margin: const EdgeInsets.only(bottom: 16),
+          elevation: 3,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // SECCIÓN DE IMAGEN ACTUALIZADA
+              Container(
+                height: 160,
+                decoration: BoxDecoration(
+                  color: Colors.grey[300],
+                  borderRadius: const BorderRadius.only(
+                    topLeft: Radius.circular(16),
+                    topRight: Radius.circular(16),
                   ),
                 ),
-                const SizedBox(height: 8),
-
-                // Servicios (chips)
-                if (servicios.isNotEmpty)
-                  Wrap(
-                    spacing: 6,
-                    runSpacing: 6,
-                    children: servicios.take(3).map((servicio) {
-                      return Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                        decoration: BoxDecoration(
-                          color: const Color(0xFF00897B).withOpacity(0.1),
-                          borderRadius: BorderRadius.circular(12),
-                          border: Border.all(
-                            color: const Color(0xFF00897B).withOpacity(0.3),
-                          ),
-                        ),
-                        child: Text(
-                          servicio.toString(),
-                          style: const TextStyle(
-                            fontSize: 11,
-                            color: Color(0xFF00897B),
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                      );
-                    }).toList(),
-                  ),
-                
-                const SizedBox(height: 16),
-                const Divider(),
-                const SizedBox(height: 12),
-
-                // Fechas
-                Row(
+                child: Stack(
                   children: [
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Row(
-                            children: [
-                              const Icon(Icons.calendar_today, size: 16, color: Color(0xFF00897B)),
-                              const SizedBox(width: 8),
-                              Text(
-                                'Check-in',
-                                style: TextStyle(
-                                  fontSize: 12,
-                                  color: Colors.grey[600],
-                                  fontWeight: FontWeight.w500,
-                                ),
-                              ),
-                            ],
+                    // IMAGEN DE LA HABITACIÓN O PLACEHOLDER
+                    if (imagenUrl.isNotEmpty && !isLoadingHabitacion)
+                      CachedNetworkImage(
+                        imageUrl: imagenUrl,
+                        fit: BoxFit.cover,
+                        width: double.infinity,
+                        height: 160,
+                        placeholder: (context, url) => Center(
+                          child: CircularProgressIndicator(
+                            color: Color(0xFF00897B),
                           ),
-                          const SizedBox(height: 4),
-                          Text(
-                            _formatearFecha(reserva['fechaCheckIn']),
-                            style: const TextStyle(
-                              fontSize: 16,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Row(
-                            children: [
-                              const Icon(Icons.event, size: 16, color: Color(0xFF00897B)),
-                              const SizedBox(width: 8),
-                              Text(
-                                'Check-out',
-                                style: TextStyle(
-                                  fontSize: 12,
-                                  color: Colors.grey[600],
-                                  fontWeight: FontWeight.w500,
-                                ),
-                              ),
-                            ],
-                          ),
-                          const SizedBox(height: 4),
-                          Text(
-                            _formatearFecha(reserva['fechaCheckOut']),
-                            style: const TextStyle(
-                              fontSize: 16,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
-                ),
-
-                const SizedBox(height: 16),
-
-                // Estadía y precio
-                Container(
-                  padding: const EdgeInsets.all(12),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFF00897B).withOpacity(0.05),
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Row(
-                        children: [
-                          const Icon(Icons.nights_stay, size: 20, color: Color(0xFF00897B)),
-                          const SizedBox(width: 8),
-                          Text(
-                            '$diasEstadia ${diasEstadia == 1 ? 'noche' : 'noches'}',
-                            style: const TextStyle(
-                              fontSize: 16,
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ),
-                        ],
-                      ),
-                      Text(
-                        'USD \$${precioTotal.toStringAsFixed(2)}',
-                        style: const TextStyle(
-                          fontSize: 20,
-                          fontWeight: FontWeight.bold,
+                        ),
+                        errorWidget: (context, url, error) =>
+                            _buildPlaceholderImage(),
+                      )
+                    else if (isLoadingHabitacion)
+                      Center(
+                        child: CircularProgressIndicator(
                           color: Color(0xFF00897B),
                         ),
-                      ),
-                    ],
-                  ),
-                ),
+                      )
+                    else
+                      _buildPlaceholderImage(),
 
-               // Botones (ahora en un Row)
-                const SizedBox(height: 16),
-                Row(
-                  children: [
-                     // Botón de Detalles (Llama a _verDetallesReserva)
-                    Expanded(
-                      child: ElevatedButton.icon(
-                        onPressed: () => _verDetallesReserva(reserva), 
-                        icon: const Icon(Icons.info_outline, size: 18),
-                        label: const Text('Ver Detalles'),
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.grey[200], 
-                          foregroundColor: const Color(0xFF00897B), 
-                          padding: const EdgeInsets.symmetric(vertical: 12),
-                          elevation: 0,
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(12),
-                            side: BorderSide(color: Colors.grey[300]!),
+                    // BADGE DE ESTADO
+                    Positioned(
+                      top: 12,
+                      right: 12,
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 12,
+                          vertical: 6,
+                        ),
+                        decoration: BoxDecoration(
+                          color: _getEstadoColor(estado),
+                          borderRadius: BorderRadius.circular(20),
+                        ),
+                        child: Text(
+                          estado.toUpperCase(),
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 12,
+                            fontWeight: FontWeight.bold,
                           ),
                         ),
                       ),
                     ),
-                    const SizedBox(width: 12), // Espacio entre botones
+                  ],
+                ),
+              ),
 
-                    // Botón de Cancelar (Solo si está confirmada)
-                    Expanded(
-                      child: (estado.toLowerCase() == 'confirmada')
-                          ? OutlinedButton.icon(
-                              onPressed: () {
-                                _mostrarDialogoCancelar(reserva);
-                              },
-                              icon: const Icon(Icons.cancel_outlined, size: 18),
-                              label: const Text('Cancelar'),
-                              style: OutlinedButton.styleFrom(
-                                foregroundColor: Colors.red,
-                                side: const BorderSide(color: Colors.red),
-                                padding: const EdgeInsets.symmetric(vertical: 12),
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(12),
+              Padding(
+                padding: const EdgeInsets.all(16),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // NOMBRE DE LA HABITACIÓN
+                    Text(
+                      nombreHab,
+                      style: const TextStyle(
+                        fontSize: 20,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.black87,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+
+                    // ID DE RESERVA
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 10,
+                        vertical: 4,
+                      ),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF00897B).withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(
+                          color: const Color(0xFF00897B).withOpacity(0.3),
+                        ),
+                      ),
+                      child: Text(
+                        'ID Reserva: ${reserva['id'] ?? 'N/A'}',
+                        style: const TextStyle(
+                          fontSize: 11,
+                          color: Color(0xFF00897B),
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ),
+
+                    const SizedBox(height: 16),
+                    const Divider(),
+                    const SizedBox(height: 12),
+
+                    // FECHAS
+                    Row(
+                      children: [
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Row(
+                                children: [
+                                  const Icon(
+                                    Icons.calendar_today,
+                                    size: 16,
+                                    color: Color(0xFF00897B),
+                                  ),
+                                  const SizedBox(width: 8),
+                                  Text(
+                                    'Check-in',
+                                    style: TextStyle(
+                                      fontSize: 12,
+                                      color: Colors.grey[600],
+                                      fontWeight: FontWeight.w500,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 4),
+                              Text(
+                                _formatearFecha(fechaCheckIn),
+                                style: const TextStyle(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.bold,
                                 ),
                               ),
-                            )
-                          : Container(), // Si no está confirmada, deja un espacio vacío
+                            ],
+                          ),
+                        ),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Row(
+                                children: [
+                                  const Icon(
+                                    Icons.event,
+                                    size: 16,
+                                    color: Color(0xFF00897B),
+                                  ),
+                                  const SizedBox(width: 8),
+                                  Text(
+                                    'Check-out',
+                                    style: TextStyle(
+                                      fontSize: 12,
+                                      color: Colors.grey[600],
+                                      fontWeight: FontWeight.w500,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 4),
+                              Text(
+                                _formatearFecha(fechaCheckOut),
+                                style: const TextStyle(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+
+                    const SizedBox(height: 16),
+
+                    // BOTONES
+                    Row(
+                      children: [
+                        Expanded(
+                          child: ElevatedButton.icon(
+                            onPressed: () => _verDetallesReserva(reserva),
+                            icon: const Icon(Icons.info_outline, size: 18),
+                            label: const Text('Ver Detalles'),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: Colors.grey[200],
+                              foregroundColor: const Color(0xFF00897B),
+                              padding: const EdgeInsets.symmetric(vertical: 12),
+                              elevation: 0,
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(12),
+                                side: BorderSide(color: Colors.grey[300]!),
+                              ),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: (estado.toLowerCase() == 'activa')
+                              ? OutlinedButton.icon(
+                                  onPressed: () {
+                                    _mostrarDialogoCancelar(reserva);
+                                  },
+                                  icon: const Icon(
+                                    Icons.cancel_outlined,
+                                    size: 18,
+                                  ),
+                                  label: const Text('Cancelar'),
+                                  style: OutlinedButton.styleFrom(
+                                    foregroundColor: Colors.red,
+                                    side: const BorderSide(color: Colors.red),
+                                    padding: const EdgeInsets.symmetric(
+                                      vertical: 12,
+                                    ),
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(12),
+                                    ),
+                                  ),
+                                )
+                              : Container(),
+                        ),
+                      ],
                     ),
                   ],
                 ),
-              ],
-            ),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  // AGREGAR MÉTODO PARA PLACEHOLDER
+  Widget _buildPlaceholderImage() {
+    return Center(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(Icons.hotel, size: 60, color: Colors.grey[500]),
+          const SizedBox(height: 8),
+          Text(
+            'Imagen no disponible',
+            style: TextStyle(color: Colors.grey[600]),
           ),
         ],
       ),
@@ -527,7 +561,9 @@ class _MisReservasScreenState extends State<MisReservasScreen> {
       builder: (context) => AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         title: const Text('¿Cancelar Reserva?'),
-        content: const Text('¿Estás seguro de que deseas cancelar esta reserva? Esta acción no se puede deshacer.'),
+        content: const Text(
+          '¿Estás seguro de que deseas cancelar esta reserva? Esta acción no se puede deshacer.',
+        ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
@@ -536,7 +572,7 @@ class _MisReservasScreenState extends State<MisReservasScreen> {
           ElevatedButton(
             onPressed: () async {
               Navigator.pop(context);
-              await _cancelarReserva(reserva['idReserva'] ?? reserva['_id']);
+              await _cancelarReserva(reserva['id']);
             },
             style: ElevatedButton.styleFrom(
               backgroundColor: Colors.red,
@@ -551,17 +587,15 @@ class _MisReservasScreenState extends State<MisReservasScreen> {
 
   Future<void> _cancelarReserva(String idReserva) async {
     try {
-      // Aquí llamarías a tu API para cancelar
-      // await ApiService.cancelarReserva(idReserva);
-      
+      await _firebaseService.cancelarReserva(idReserva);
+
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text('Reserva cancelada exitosamente'),
           backgroundColor: Colors.green,
         ),
       );
-      
-      // Recargar reservas
+
       _cargarReservas();
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(

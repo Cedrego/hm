@@ -1,14 +1,12 @@
 import 'package:flutter/material.dart';
-import '../../core/api_service.dart';
+import 'package:cached_network_image/cached_network_image.dart';
+import '../../core/firebase_service.dart';
 import '../../core/auth_service.dart'; 
 import '../custom_app_bar.dart'; 
 import '../app_drawer.dart'; 
-import '../../core/app_export.dart'; // Para AppRoutes
-import 'dart:convert';
-import 'dart:typed_data';
+import '../../core/app_export.dart';
 
 class RoomListScreen extends StatefulWidget {
-  // 🟢 Eliminado el parámetro 'user' ya que se carga con AuthService.
   const RoomListScreen({super.key});
 
   @override
@@ -17,12 +15,13 @@ class RoomListScreen extends StatefulWidget {
 
 class _RoomListScreenState extends State<RoomListScreen> {
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
+  final FirebaseService _firebaseService = FirebaseService();
   
   bool _isLoadingUserData = true;
   Map<String, dynamic>? _userData;
   bool get _isAdmin => _userData?['rol'] == 'admin';
 
-  List<dynamic> habitaciones = [];
+  List<Map<String, dynamic>> habitaciones = [];
   bool isLoading = true;
   String errorMessage = '';
 
@@ -56,23 +55,33 @@ class _RoomListScreenState extends State<RoomListScreen> {
     });
 
     try {
-      final data = await ApiService.getHabitaciones();
-      
-      if (!mounted) return;
-      setState(() {
-        habitaciones = data;
-        isLoading = false;
+      // Escuchar el stream de habitaciones
+      _firebaseService.getHabitaciones().listen((listaHabitaciones) {
+        if (mounted) {
+          setState(() {
+            habitaciones = listaHabitaciones;
+            isLoading = false;
+          });
+        }
+      }, onError: (error) {
+        if (mounted) {
+          setState(() {
+            errorMessage = 'Error al cargar habitaciones: $error';
+            isLoading = false;
+          });
+        }
       });
     } catch (e) {
-      if (!mounted) return;
-      setState(() {
-        errorMessage = 'Error al cargar habitaciones: $e';
-        isLoading = false;
-      });
+      if (mounted) {
+        setState(() {
+          errorMessage = 'Error al cargar habitaciones: $e';
+          isLoading = false;
+        });
+      }
     }
   }
   
-  Future<void> _onLogoutPressed(BuildContext context) async {
+  Future<void> _onLogoutPressed() async {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
@@ -92,15 +101,13 @@ class _RoomListScreenState extends State<RoomListScreen> {
       ),
     );
 
-    if (confirmed == true) {
+    if (confirmed == true && mounted) {
       await AuthService.logout();
-      if (mounted) { 
-        Navigator.pushNamedAndRemoveUntil(
-          context,
-          AppRoutes.loginScreen,
-          (route) => false,
-        );
-      }
+      Navigator.pushNamedAndRemoveUntil(
+        context,
+        AppRoutes.loginScreen,
+        (route) => false,
+      );
     }
   }
 
@@ -111,25 +118,22 @@ class _RoomListScreenState extends State<RoomListScreen> {
     }
     
     return Scaffold(
-      key: _scaffoldKey, // 🟢 Asignar la key al Scaffold
+      key: _scaffoldKey,
       backgroundColor: Colors.grey[100],
       
-      // 🟢 USANDO CUSTOMAPPBAR 🟢
       appBar: CustomAppBar(
         scaffoldKey: _scaffoldKey,
-        onLogoutPressed: () => _onLogoutPressed(context),
+        onLogoutPressed: _onLogoutPressed,
         userData: _userData,
         isAdmin: _isAdmin,
       ),
       
-      // 🟢 USANDO APPDRAWER 🟢
       drawer: AppDrawer(
         userData: _userData,
         isAdmin: _isAdmin,
-        onLogoutPressed: () => _onLogoutPressed(context),
+        onLogoutPressed: _onLogoutPressed,
       ),
       
-      // La lógica del cuerpo se mantiene igual.
       body: RefreshIndicator(
         onRefresh: _cargarHabitaciones,
         color: const Color(0xFF00897B),
@@ -199,7 +203,7 @@ class _RoomListScreenState extends State<RoomListScreen> {
                         padding: const EdgeInsets.symmetric(vertical: 8),
                         itemCount: habitaciones.length,
                         itemBuilder: (context, index) {
-                          return _buildRoomListItem(habitaciones[index] as Map<String, dynamic>);
+                          return _buildRoomListItem(habitaciones[index]);
                         },
                       ),
       ),
@@ -211,21 +215,14 @@ class _RoomListScreenState extends State<RoomListScreen> {
     );
   }
 
-Widget _buildRoomListItem(Map<String, dynamic> room) {
-    final String nombre = (room['nombre'] as String?) ?? 'Habitación sin nombre';
-    final String descripcion = (room['descripcion'] as String?) ?? 'Sin descripción';
-    
-    // Asumimos que 'precio' es un número (int o double)
-    final double precio = (room['precio'] as num?)?.toDouble() ?? 0.0;
-    
-    // La clave de la imagen de la API es 'imagenUrl'
-    final String? imagenBase64 = room['imagen'] as String?;
-    
-    // 🟢 CORRECCIÓN: La clave de servicios de la API es 'servicios'
-    final List<String> serviciosAdicionales = (room['servicios'] as List<dynamic>?)
-        ?.map((s) => s.toString())
-        .toList() ?? [];
+  Widget _buildRoomListItem(Map<String, dynamic> room) {
+    final String nombre = room['nombre'] ?? 'Habitación sin nombre';
+    final String descripcion = room['descripcion'] ?? 'Sin descripción';
+    final double precio = (room['precio'] ?? 0.0).toDouble();
+    final String? imagenUrl = room['imagenUrl'];
+    final bool disponible = room['disponible'] ?? true;
 
+    final List<String> serviciosAdicionales = List<String>.from(room['servicios'] ?? []);
 
     return GestureDetector(
       onTap: () => _mostrarDetalleHabitacion(room),
@@ -235,7 +232,9 @@ Widget _buildRoomListItem(Map<String, dynamic> room) {
         decoration: BoxDecoration(
           color: Colors.white,
           borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: Colors.grey.shade300),
+          border: Border.all(
+            color: disponible ? Colors.grey.shade300 : Colors.red.shade300,
+          ),
           boxShadow: [
             BoxShadow(
               color: Colors.grey.shade200,
@@ -247,22 +246,48 @@ Widget _buildRoomListItem(Map<String, dynamic> room) {
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-           _buildRoomImage(imagenBase64),
+            _buildRoomImage(imagenUrl, disponible),
             const SizedBox(width: 12),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // 🟢 Ahora usa el nombre correcto de la API
-                  Text(
-                    nombre,
-                    maxLines: 2, 
-                    overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                  // Nombre con indicador de disponibilidad
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          nombre,
+                          maxLines: 2, 
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                            fontWeight: FontWeight.bold, 
+                            fontSize: 16,
+                            color: disponible ? Colors.black : Colors.grey,
+                          ),
+                        ),
+                      ),
+                      if (!disponible)
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                          decoration: BoxDecoration(
+                            color: Colors.red.shade100,
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: Text(
+                            'NO DISPONIBLE',
+                            style: TextStyle(
+                              fontSize: 10,
+                              color: Colors.red.shade800,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ),
+                    ],
                   ),
                   const SizedBox(height: 4),
 
-                  // Servicios (Usando la clave 'servicios' corregida)
+                  // Servicios
                   if (serviciosAdicionales.isNotEmpty)
                     Padding(
                       padding: const EdgeInsets.only(bottom: 4),
@@ -277,20 +302,20 @@ Widget _buildRoomListItem(Map<String, dynamic> room) {
                                 child: Container(
                                   padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                                   decoration: BoxDecoration(
-                                    color: _getServiceColor(servicio.toString()),
+                                    color: _getServiceColor(servicio),
                                     borderRadius: BorderRadius.circular(12),
                                   ),
                                   child: Row(
                                     mainAxisSize: MainAxisSize.min,
                                     children: [
                                       Icon(
-                                        _getServiceIcon(servicio.toString()),
+                                        _getServiceIcon(servicio),
                                         size: 12,
                                         color: Colors.white,
                                       ),
                                       const SizedBox(width: 4),
                                       Text(
-                                        servicio.toString(),
+                                        servicio,
                                         style: const TextStyle(
                                           fontSize: 10,
                                           color: Colors.white,
@@ -307,87 +332,105 @@ Widget _buildRoomListItem(Map<String, dynamic> room) {
                       ),
                     ),
                   
-                  // 🟢 Ahora usa la descripción correcta de la API
+                  // Descripción
                   Text(
                     descripcion,
                     maxLines: 10,
                     overflow: TextOverflow.ellipsis,
-                    style: TextStyle(fontSize: 13, color: Colors.grey[600]),
+                    style: TextStyle(
+                      fontSize: 13, 
+                      color: disponible ? Colors.grey[600] : Colors.grey[400],
+                    ),
                   ),
                   const SizedBox(height: 4),
 
-                  // 🟢 Ahora usa el precio correcto de la API
+                  // Precio
                   if (precio > 0)
                     Text(
                       '\$${precio.toStringAsFixed(2)} / noche',
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontWeight: FontWeight.bold,
-                        color: Color(0xFF00897B),
+                        color: disponible ? const Color(0xFF00897B) : Colors.grey,
                         fontSize: 14,
                       ),
                     ),
                 ],
               ),
             ),
-            Icon(Icons.info_outline, color: Colors.grey[600], size: 24),
+            Icon(
+              Icons.info_outline, 
+              color: disponible ? Colors.grey[600] : Colors.grey[400], 
+              size: 24
+            ),
           ],
         ),
       ),
     );
   }
-  // 🆕 Método para construir la imagen desde base64
-Widget _buildRoomImage(String? imagenBase64) {
-  // Si no hay imagen o es "vacio"
-  if (imagenBase64 == null || imagenBase64.isEmpty || imagenBase64 == 'vacio') {
-    return Container(
-      width: 70,
-      height: 70,
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(8),
-        color: Colors.grey[300],
-      ),
-      child: const Icon(Icons.hotel, size: 40, color: Colors.grey),
-    );
-  }
 
-  // Intentar decodificar la imagen
-  try {
-    Uint8List bytes = base64Decode(imagenBase64);
+  Widget _buildRoomImage(String? imagenUrl, bool disponible) {
+    // Si no hay imagen o es "vacio"
+    if (imagenUrl == null || imagenUrl.isEmpty) {
+      return Container(
+        width: 70,
+        height: 70,
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(8),
+          color: disponible ? Colors.grey[300] : Colors.grey[200],
+        ),
+        child: Icon(
+          Icons.hotel, 
+          size: 40, 
+          color: disponible ? Colors.grey : Colors.grey[400]
+        ),
+      );
+    }
+
     return Container(
       width: 70,
       height: 70,
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(8),
+        color: !disponible ? Colors.grey[100] : null,
       ),
       child: ClipRRect(
         borderRadius: BorderRadius.circular(8),
-        child: Image.memory(
-          bytes,
-          fit: BoxFit.cover,
-          errorBuilder: (context, error, stackTrace) {
-            return Container(
-              color: Colors.grey[300],
-              child: const Icon(Icons.hotel, size: 40, color: Colors.grey),
-            );
-          },
+        child: Stack(
+          children: [
+            CachedNetworkImage(
+              imageUrl: imagenUrl,
+              fit: BoxFit.cover,
+              width: 70,
+              height: 70,
+              placeholder: (context, url) => Container(
+                color: Colors.grey[300],
+                child: const Icon(Icons.hotel, size: 30, color: Colors.grey),
+              ),
+              errorWidget: (context, url, error) {
+                return Container(
+                  color: Colors.grey[300],
+                  child: const Icon(Icons.hotel, size: 30, color: Colors.grey),
+                );
+              },
+            ),
+            if (!disponible)
+              Container(
+                color: Colors.black54,
+                child: const Center(
+                  child: Icon(
+                    Icons.block,
+                    color: Colors.white,
+                    size: 24,
+                  ),
+                ),
+              ),
+          ],
         ),
       ),
     );
-  } catch (e) {
-    print('❌ Error al decodificar imagen de habitación: $e');
-    return Container(
-      width: 70,
-      height: 70,
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(8),
-        color: Colors.grey[300],
-      ),
-      child: const Icon(Icons.hotel, size: 40, color: Colors.grey),
-    );
   }
-}
+
   void _mostrarDetalleHabitacion(Map<String, dynamic> habitacion) {
-    // Navegar a la pantalla de detalle de habitación usando rutas con argumentos
     if (mounted) {
       Navigator.pushNamed(
         context,

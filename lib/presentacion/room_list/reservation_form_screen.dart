@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
-import '../../core/api_service.dart';
+import '../../core/firebase_service.dart';
 import '../../core/auth_service.dart';
-import '../../core/app_export.dart'; // Para AppRoutes
+import '../../core/app_export.dart';
 
 class ReservationFormScreen extends StatefulWidget {
   final Map<String, dynamic> room;
@@ -19,14 +19,13 @@ class _ReservationFormScreenState extends State<ReservationFormScreen> {
   bool isLoading = false;
   String? _errorMessage;
   Map<String, dynamic>? _userData;
+  final FirebaseService _firebaseService = FirebaseService();
   final currencyFormatter = NumberFormat.currency(locale: 'es_ES', symbol: '\$', decimalDigits: 2);
   
-  // Extraer datos de la habitación
   double get _roomPrice => (widget.room['precio'] as num?)?.toDouble() ?? 0.0;
-  String get _roomId => widget.room['idHabitacion'] ?? '';
+  String get _roomId => widget.room['id'] ?? '';
   String get _roomName => widget.room['nombre'] ?? 'Habitación Desconocida';
 
-  // Obtener la duración de la reserva en días
   int get _durationInDays {
     if (checkInDate != null && checkOutDate != null) {
       return checkOutDate!.difference(checkInDate!).inDays;
@@ -34,7 +33,6 @@ class _ReservationFormScreenState extends State<ReservationFormScreen> {
     return 0;
   }
 
-  // Calcular el precio total
   double get _totalPrice => _roomPrice * _durationInDays;
 
   @override
@@ -52,11 +50,9 @@ class _ReservationFormScreenState extends State<ReservationFormScreen> {
       });
     } catch (e) {
       if (!mounted) return;
-      // Manejar error de carga de usuario si es necesario
     }
   }
 
-  // Método para seleccionar fecha
   Future<void> _selectDate(BuildContext context, bool isCheckIn) async {
     final DateTime? picked = await showDatePicker(
       context: context,
@@ -64,7 +60,6 @@ class _ReservationFormScreenState extends State<ReservationFormScreen> {
       firstDate: DateTime.now(),
       lastDate: DateTime.now().add(const Duration(days: 365)),
       selectableDayPredicate: (DateTime date) {
-        // Asegurar que la fecha de check-out no sea antes del check-in
         if (!isCheckIn && checkInDate != null && date.isBefore(checkInDate!)) {
           return false;
         }
@@ -84,10 +79,9 @@ class _ReservationFormScreenState extends State<ReservationFormScreen> {
 
     if (picked != null) {
       setState(() {
-        _errorMessage = null; // Limpiar mensaje de error al seleccionar
+        _errorMessage = null;
         if (isCheckIn) {
           checkInDate = picked;
-          // Si ya hay check-out y es antes o igual al check-in, limpiarlo
           if (checkOutDate != null && (checkOutDate!.isBefore(picked) || checkOutDate!.isAtSameMomentAs(picked))) {
             checkOutDate = null;
           }
@@ -98,7 +92,6 @@ class _ReservationFormScreenState extends State<ReservationFormScreen> {
     }
   }
 
-  // Método para confirmar la reserva
   Future<void> _confirmReservation() async {
     if (checkInDate == null || checkOutDate == null) {
       setState(() {
@@ -122,7 +115,7 @@ class _ReservationFormScreenState extends State<ReservationFormScreen> {
     try {
       final idUsuario = _userData!['id'];
 
-      await ApiService.crearReserva(
+      await _firebaseService.crearReserva(
         idUsuario: idUsuario,
         idHabitacion: _roomId,
         fechaCheckIn: checkInDate!.toIso8601String().substring(0, 10),
@@ -131,7 +124,6 @@ class _ReservationFormScreenState extends State<ReservationFormScreen> {
 
       if (!mounted) return;
       
-      // Mostrar éxito y navegar al listado de reservas o home
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text('✅ Reserva creada exitosamente!'),
@@ -140,14 +132,12 @@ class _ReservationFormScreenState extends State<ReservationFormScreen> {
         ),
       );
       
-      // Navegar de vuelta a la lista de habitaciones o a la lista de reservas
       Navigator.popUntil(context, ModalRoute.withName(AppRoutes.roomListScreen));
       Navigator.pushNamed(
         context, 
         AppRoutes.reservationListScreen, 
         arguments: widget.room
       );
-
 
     } catch (e) {
       if (!mounted) return;
@@ -162,7 +152,6 @@ class _ReservationFormScreenState extends State<ReservationFormScreen> {
     }
   }
 
-  // Helper para el widget de selección de fecha
   Widget _buildDateSelector({
     required String label,
     required DateTime? date,
@@ -224,7 +213,6 @@ class _ReservationFormScreenState extends State<ReservationFormScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // Sección de Fechas
                 Card(
                   elevation: 2,
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
@@ -264,7 +252,6 @@ class _ReservationFormScreenState extends State<ReservationFormScreen> {
 
                 const SizedBox(height: 16),
 
-                // Resumen de la Reserva
                 Card(
                   elevation: 2,
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
@@ -293,7 +280,6 @@ class _ReservationFormScreenState extends State<ReservationFormScreen> {
                 
                 const SizedBox(height: 16),
 
-                // Mensaje de Error
                 if (_errorMessage != null)
                   Padding(
                     padding: const EdgeInsets.only(bottom: 16),
@@ -303,7 +289,6 @@ class _ReservationFormScreenState extends State<ReservationFormScreen> {
                     ),
                   ),
 
-                // Botón de Confirmación
                 SizedBox(
                   width: double.infinity,
                   child: ElevatedButton(
@@ -329,7 +314,6 @@ class _ReservationFormScreenState extends State<ReservationFormScreen> {
             ),
           ),
           
-          // Loading overlay
           if (isLoading)
             Container(
               color: Colors.black.withOpacity(0.5),

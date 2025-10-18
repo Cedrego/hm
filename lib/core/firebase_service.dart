@@ -71,7 +71,7 @@ class FirebaseService {
       // Crear nuevo usuario
       final userData = Map<String, dynamic>.from(datos);
       userData.remove('imagen'); // Quitar base64
-      
+
       // Agregar URL de Cloudinary si se subió
       if (imagenUrl != null) {
         userData['imagenUrl'] = imagenUrl;
@@ -87,10 +87,7 @@ class FirebaseService {
       return {
         'success': true,
         'message': 'Usuario registrado exitosamente',
-        'usuario': {
-          'id': docRef.id,
-          ...responseData
-        }
+        'usuario': {'id': docRef.id, ...responseData},
       };
     } catch (e) {
       print('❌ Error en registro: $e');
@@ -202,11 +199,19 @@ class FirebaseService {
     required String fechaCheckOut,
   }) async {
     try {
+      final habitacion = await getHabitacionPorId(idHabitacion);
+      final precioTotal = _calcularPrecioTotal(
+        fechaCheckIn,
+        fechaCheckOut,
+        habitacion?['precio'] ?? 0.0,
+      );
+
       final docRef = await _firestore.collection('reservas').add({
         'idUsuario': idUsuario,
         'idHabitacion': idHabitacion,
         'fechaCheckIn': fechaCheckIn,
         'fechaCheckOut': fechaCheckOut,
+        'precioTotal': precioTotal,
         'estado': 'activa',
         'fechaReserva': FieldValue.serverTimestamp(),
       });
@@ -220,12 +225,24 @@ class FirebaseService {
           'idHabitacion': idHabitacion,
           'fechaCheckIn': fechaCheckIn,
           'fechaCheckOut': fechaCheckOut,
+          'precioTotal': precioTotal,
           'estado': 'activa',
         },
       };
     } catch (e) {
       throw Exception('Error al crear reserva: $e');
     }
+  }
+
+  double _calcularPrecioTotal(
+    String checkIn,
+    String checkOut,
+    double precioDiario,
+  ) {
+    final inicio = DateTime.parse(checkIn);
+    final fin = DateTime.parse(checkOut);
+    final dias = fin.difference(inicio).inDays;
+    return dias * precioDiario;
   }
 
   // Obtener reservas por habitación
@@ -273,10 +290,13 @@ class FirebaseService {
   // =========================================================================
 
   // Subir imagen a Cloudinary
-  Future<String> _subirImagenACloudinary(String base64Image, {String folder = 'usuarios'}) async {
+  Future<String> _subirImagenACloudinary(
+    String base64Image, {
+    String folder = 'usuarios',
+  }) async {
     try {
       print('📤 Subiendo imagen a Cloudinary...');
-      
+
       const cloudName = 'dexpqwsqp';
       const uploadPreset = 'hostel_mochileros';
 
@@ -289,15 +309,20 @@ class FirebaseService {
       // ✅ USAR SUBCARPETAS DENTRO DE hostel_mochileros
       final subcarpeta = 'hostel_mochileros/$folder';
 
-      final uri = Uri.parse('https://api.cloudinary.com/v1_1/$cloudName/upload');
-      
+      final uri = Uri.parse(
+        'https://api.cloudinary.com/v1_1/$cloudName/upload',
+      );
+
       final request = http.MultipartRequest('POST', uri)
         ..fields['upload_preset'] = uploadPreset
-        ..fields['folder'] = subcarpeta  // ← SUBCARPETA CORREGIDA
-        ..files.add(http.MultipartFile.fromString(
-          'file',
-          'data:image/jpeg;base64,$cleanBase64',
-        ));
+        ..fields['folder'] =
+            subcarpeta // ← SUBCARPETA CORREGIDA
+        ..files.add(
+          http.MultipartFile.fromString(
+            'file',
+            'data:image/jpeg;base64,$cleanBase64',
+          ),
+        );
 
       print('🌐 Enviando solicitud a Cloudinary - Carpeta: $subcarpeta');
       final response = await request.send();
@@ -306,10 +331,14 @@ class FirebaseService {
 
       if (response.statusCode == 200) {
         final imageUrl = jsonResponse['secure_url'];
-        print('✅ Imagen subida exitosamente a carpeta "$subcarpeta": $imageUrl');
+        print(
+          '✅ Imagen subida exitosamente a carpeta "$subcarpeta": $imageUrl',
+        );
         return imageUrl;
       } else {
-        throw Exception('Error de Cloudinary: ${jsonResponse['error']['message']}');
+        throw Exception(
+          'Error de Cloudinary: ${jsonResponse['error']['message']}',
+        );
       }
     } catch (e) {
       print('❌ Error subiendo imagen a Cloudinary: $e');
@@ -327,6 +356,23 @@ class FirebaseService {
       print('✅ CONEXIÓN EXITOSA con Firebase');
     } catch (e) {
       print('❌ ERROR de conexión: $e');
+    }
+  }
+
+  // Obtener habitación por ID
+  Future<Map<String, dynamic>?> getHabitacionPorId(String habitacionId) async {
+    try {
+      final doc = await _firestore
+          .collection('habitaciones')
+          .doc(habitacionId)
+          .get();
+      if (doc.exists) {
+        return {'id': doc.id, ...doc.data()!};
+      }
+      return null;
+    } catch (e) {
+      print('Error obteniendo habitación $habitacionId: $e');
+      throw Exception('Error al cargar datos de la habitación');
     }
   }
 }

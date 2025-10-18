@@ -2,11 +2,11 @@ import 'dart:convert';
 import 'dart:io';
 import 'package:image_picker/image_picker.dart';
 import 'package:flutter/material.dart';
-import '../../core/api_service.dart';
 import '../custom_app_bar.dart'; 
 import '../app_drawer.dart'; 
 import '../../core/auth_service.dart'; 
 import '../../core/app_export.dart';
+import '../../core/firebase_service.dart';
 
 // Constantes de Color Simplificadas
 const Color _kPrimaryColor = Color(0xFF008080);
@@ -23,6 +23,7 @@ class RoomCreationScreen extends StatefulWidget {
 
 class _RoomCreationScreenState extends State<RoomCreationScreen> {
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
+  final FirebaseService _firebaseService = FirebaseService();
   
   // Controladores
   final TextEditingController _nombreController = TextEditingController();
@@ -624,50 +625,50 @@ class _RoomCreationScreenState extends State<RoomCreationScreen> {
     }
 
     // Mostrar loading
-    setState(() {
-      _isLoadingCreation = true;
-    });
+  setState(() {
+    _isLoadingCreation = true;
+  });
 
-    try {
-      // 🆕 Llamar al API con la imagen en base64
-      await ApiService.crearHabitacion(
-        nombre: _nombreController.text.trim(),
-        descripcion: _descripcionController.text.trim(),
-        precio: _precio,
-        servicios: serviciosSeleccionados,
-        imagenBase64: _imagenBase64 ?? 'vacio', // ← Enviar base64 en lugar de URL
+  try {
+    // ✅ LLAMAR A FIREBASE SERVICE EN LUGAR DE API SERVICE
+    await _firebaseService.crearHabitacion(
+      nombre: _nombreController.text.trim(),
+      descripcion: _descripcionController.text.trim(),
+      precio: _precio,
+      servicios: serviciosSeleccionados,
+      imagenBase64: _imagenBase64, // ← FirebaseService manejará Cloudinary
+    );
+
+    // Éxito
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Row(
+            children: [
+              Icon(Icons.check_circle, color: Colors.white),
+              SizedBox(width: 8),
+              Text('¡Habitación creada exitosamente!'),
+            ],
+          ),
+          backgroundColor: Colors.green,
+          duration: Duration(seconds: 2),
+        ),
       );
 
-      // Éxito
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Row(
-              children: [
-                Icon(Icons.check_circle, color: Colors.white),
-                SizedBox(width: 8),
-                Text('¡Habitación creada exitosamente!'),
-              ],
-            ),
-            backgroundColor: Colors.green,
-            duration: Duration(seconds: 2),
-          ),
-        );
-
-        Navigator.pop(context);
-      }
-    } catch (e) {
-      if (mounted) {
-        _mostrarError(e.toString().replaceAll('Exception: ', ''));
-      }
-    } finally {
-      if (mounted) {
-        setState(() {
-          _isLoadingCreation = false;
-        });
-      }
+      Navigator.pop(context);
+    }
+  } catch (e) {
+    if (mounted) {
+      _mostrarError(e.toString().replaceAll('Exception: ', ''));
+    }
+  } finally {
+    if (mounted) {
+      setState(() {
+        _isLoadingCreation = false;
+      });
     }
   }
+}
 
   void _mostrarError(String mensaje) {
     ScaffoldMessenger.of(context).showSnackBar(

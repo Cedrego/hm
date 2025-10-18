@@ -1,9 +1,10 @@
 import 'package:flutter/material.dart';
-import '../../core/auth_service.dart'; // Importar AuthService
-import '../custom_app_bar.dart'; // Importar CustomAppBar
-import '../app_drawer.dart'; // Importar AppDrawer
-import '../../core/app_export.dart'; // Para AppRoutes
-import 'package:intl/intl.dart'; // Para formato de moneda
+import 'package:cached_network_image/cached_network_image.dart'; // ← AGREGAR PARA CLOUDINARY
+import '../../core/auth_service.dart';
+import '../custom_app_bar.dart';
+import '../app_drawer.dart';
+import '../../core/app_export.dart';
+import 'package:intl/intl.dart';
 
 class RoomDetailScreen extends StatefulWidget {
   final Map<String, dynamic> room;
@@ -15,15 +16,12 @@ class RoomDetailScreen extends StatefulWidget {
 }
 
 class _RoomDetailScreenState extends State<RoomDetailScreen> {
-  // CLAVE GLOBAL para el Drawer
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
   
-  // Estados de usuario
   bool _isLoadingUserData = true;
   Map<String, dynamic>? _userData;
   bool get _isAdmin => _userData?['rol'] == 'admin';
   final currencyFormatter = NumberFormat.currency(locale: 'es_ES', symbol: '\$', decimalDigits: 2);
-
 
   @override
   void initState() {
@@ -44,29 +42,52 @@ class _RoomDetailScreenState extends State<RoomDetailScreen> {
       setState(() {
         _isLoadingUserData = false;
       });
-      // Manejar error de carga de datos de usuario si es necesario
+    }
+  }
+
+  // ✅ MÉTODO CORREGIDO - Sin parámetro context
+  Future<void> _onLogoutPressed() async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Confirmación'),
+        content: const Text('¿Está seguro de cerrar sesión?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancelar'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            style: TextButton.styleFrom(foregroundColor: Colors.red),
+            child: const Text('Cerrar sesión'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed == true && mounted) {
+      await AuthService.logout();
+      Navigator.pushNamedAndRemoveUntil(
+        context,
+        AppRoutes.loginScreen,
+        (route) => false,
+      );
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    // Extraer datos de la habitación
     final room = widget.room;
     final String nombre = room['nombre'] ?? 'Habitación';
     final String descripcion = room['descripcion'] ?? 'Sin descripción';
-    final String imagen = room['imagenUrl'] ?? '';
+    final String imagenUrl = room['imagenUrl'] ?? ''; // ← YA USA imagenUrl (CORRECTO)
     final dynamic precioDia = room['precio'] ?? 0;
     final double precio = (precioDia is int) ? precioDia.toDouble() : (precioDia as double? ?? 0.0);
     final List<dynamic> serviciosAdicionales = room['servicios'] ?? [];
-    final String idHabitacion = room['idHabitacion'] ?? '';
+    final String idHabitacion = room['id'] ?? ''; // ← CAMBIO: 'id' en lugar de 'idHabitacion'
+    final bool disponible = room['disponible'] ?? true; // ← AGREGAR DISPONIBILIDAD
     
-    // Manejar el cierre de sesión desde el CustomAppBar
-    void onLogoutPressed(BuildContext context) {
-      AuthService.logout();
-      Navigator.pushNamedAndRemoveUntil(context, AppRoutes.loginScreen, (route) => false);
-    }
-    
-    // Mostrar un indicador de carga si los datos del usuario no están listos
     if (_isLoadingUserData) {
       return const Scaffold(
         body: Center(child: CircularProgressIndicator()),
@@ -78,14 +99,14 @@ class _RoomDetailScreenState extends State<RoomDetailScreen> {
       backgroundColor: Colors.white,
       appBar: CustomAppBar(
         scaffoldKey: _scaffoldKey,
-        onLogoutPressed: () => onLogoutPressed(context),
+        onLogoutPressed: _onLogoutPressed, // ← SIN PARÁMETRO
         userData: _userData,
         isAdmin: _isAdmin,
       ),
       drawer: AppDrawer(
         userData: _userData,
         isAdmin: _isAdmin,
-        onLogoutPressed: () => onLogoutPressed(context),
+        onLogoutPressed: _onLogoutPressed, // ← SIN PARÁMETRO
       ),
       body: Stack(
         children: [
@@ -93,7 +114,7 @@ class _RoomDetailScreenState extends State<RoomDetailScreen> {
             padding: EdgeInsets.zero,
             children: [
               // 1. Imagen Principal
-              _buildImageSection(imagen),
+              _buildImageSection(imagenUrl, disponible), // ← AGREGAR DISPONIBILIDAD
 
               // 2. Contenido Principal
               Padding(
@@ -102,7 +123,7 @@ class _RoomDetailScreenState extends State<RoomDetailScreen> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     // Nombre y Precio
-                    _buildNameAndPrice(nombre, precio),
+                    _buildNameAndPrice(nombre, precio, disponible), // ← AGREGAR DISPONIBILIDAD
                     const SizedBox(height: 16),
                     
                     // Descripción
@@ -113,7 +134,11 @@ class _RoomDetailScreenState extends State<RoomDetailScreen> {
                     const SizedBox(height: 8),
                     Text(
                       descripcion,
-                      style: const TextStyle(fontSize: 16, height: 1.5, color: Color(0xFF555555)),
+                      style: TextStyle(
+                        fontSize: 16, 
+                        height: 1.5, 
+                        color: disponible ? Color(0xFF555555) : Colors.grey[400] // ← ESTADO DISPONIBLE
+                      ),
                     ),
                     const SizedBox(height: 20),
 
@@ -123,8 +148,8 @@ class _RoomDetailScreenState extends State<RoomDetailScreen> {
                       style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Color(0xFF333333)),
                     ),
                     const SizedBox(height: 10),
-                    _buildServicesChips(serviciosAdicionales),
-                    const SizedBox(height: 80), // Espacio para el Fixed Bottom Bar
+                    _buildServicesChips(serviciosAdicionales, disponible), // ← AGREGAR DISPONIBILIDAD
+                    const SizedBox(height: 80),
                   ],
                 ),
               ),
@@ -132,14 +157,14 @@ class _RoomDetailScreenState extends State<RoomDetailScreen> {
           ),
           
           // 3. Barra de Botones Inferior Fija
-          _buildBottomButtonBar(context, idHabitacion, room),
+          _buildBottomButtonBar(context, idHabitacion, room, disponible), // ← AGREGAR DISPONIBILIDAD
         ],
       ),
     );
   }
 
-  // Helper para la sección de la imagen
-  Widget _buildImageSection(String imagenUrl) {
+  // ✅ MÉTODO ACTUALIZADO PARA CLOUDINARY CON DISPONIBILIDAD
+  Widget _buildImageSection(String imagenUrl, bool disponible) {
     return Container(
       height: 250,
       decoration: BoxDecoration(
@@ -152,47 +177,94 @@ class _RoomDetailScreenState extends State<RoomDetailScreen> {
           ),
         ],
       ),
-      child: Image.network(
-        imagenUrl,
-        fit: BoxFit.cover,
-        errorBuilder: (context, error, stackTrace) => Center(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(Icons.image_not_supported, size: 50, color: Colors.grey.shade400),
-              const Text('Imagen no disponible', style: TextStyle(color: Color(0xFF555555))),
-            ],
-          ),
-        ),
-        loadingBuilder: (context, child, loadingProgress) {
-          if (loadingProgress == null) return child;
-          return Center(
-            child: CircularProgressIndicator(
-              value: loadingProgress.expectedTotalBytes != null
-                  ? loadingProgress.cumulativeBytesLoaded / loadingProgress.expectedTotalBytes!
-                  : null,
-              color: const Color(0xFF00897B),
+      child: Stack(
+        children: [
+          // ✅ USAR CACHED NETWORK IMAGE PARA CLOUDINARY
+          imagenUrl.isNotEmpty 
+              ? CachedNetworkImage(
+                  imageUrl: imagenUrl,
+                  fit: BoxFit.cover,
+                  width: double.infinity,
+                  height: 250,
+                  placeholder: (context, url) => Center(
+                    child: CircularProgressIndicator(color: Color(0xFF00897B)),
+                  ),
+                  errorWidget: (context, url, error) => _buildPlaceholderImage(),
+                )
+              : _buildPlaceholderImage(),
+          
+          // Overlay si no está disponible
+          if (!disponible)
+            Container(
+              color: Colors.black54,
+              child: const Center(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(Icons.block, size: 50, color: Colors.white),
+                    SizedBox(height: 8),
+                    Text(
+                      'NO DISPONIBLE',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
             ),
-          );
-        },
+        ],
       ),
     );
   }
 
-  // Helper para nombre y precio
-  Widget _buildNameAndPrice(String nombre, double precio) {
+  // Widget auxiliar para imagen placeholder
+  Widget _buildPlaceholderImage() {
+    return Center(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(Icons.hotel, size: 60, color: Colors.grey.shade400),
+          const SizedBox(height: 8),
+          Text('Imagen no disponible', style: TextStyle(color: Colors.grey.shade600)),
+        ],
+      ),
+    );
+  }
+
+  // ✅ MÉTODO ACTUALIZADO CON DISPONIBILIDAD
+  Widget _buildNameAndPrice(String nombre, double precio, bool disponible) {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Expanded(
-          child: Text(
-            nombre,
-            style: const TextStyle(
-              fontSize: 28,
-              fontWeight: FontWeight.w900,
-              color: Color(0xFF00897B),
-            ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                nombre,
+                style: TextStyle(
+                  fontSize: 28,
+                  fontWeight: FontWeight.w900,
+                  color: disponible ? Color(0xFF00897B) : Colors.grey,
+                ),
+              ),
+              if (!disponible)
+                Padding(
+                  padding: const EdgeInsets.only(top: 4.0),
+                  child: Text(
+                    'No disponible para reservas',
+                    style: TextStyle(
+                      fontSize: 14,
+                      color: Colors.red.shade600,
+                      fontStyle: FontStyle.italic,
+                    ),
+                  ),
+                ),
+            ],
           ),
         ),
         const SizedBox(width: 10),
@@ -201,17 +273,17 @@ class _RoomDetailScreenState extends State<RoomDetailScreen> {
           children: [
             Text(
               currencyFormatter.format(precio),
-              style: const TextStyle(
+              style: TextStyle(
                 fontSize: 24,
                 fontWeight: FontWeight.bold,
-                color: Colors.redAccent,
+                color: disponible ? Colors.redAccent : Colors.grey,
               ),
             ),
-            const Text(
+            Text(
               '/ Noche',
               style: TextStyle(
                 fontSize: 14,
-                color: Color(0xFF555555),
+                color: disponible ? Color(0xFF555555) : Colors.grey,
               ),
             ),
           ],
@@ -220,22 +292,25 @@ class _RoomDetailScreenState extends State<RoomDetailScreen> {
     );
   }
 
-  // Helper para mostrar los servicios como chips (reutilizado de room_list_screen)
-  Widget _buildServicesChips(List<dynamic> serviciosAdicionales) {
+  // ✅ MÉTODO ACTUALIZADO CON DISPONIBILIDAD
+  Widget _buildServicesChips(List<dynamic> serviciosAdicionales, bool disponible) {
     if (serviciosAdicionales.isEmpty) {
-      return const Text('No se especificaron servicios adicionales.');
+      return Text(
+        'No se especificaron servicios adicionales.',
+        style: TextStyle(color: disponible ? Color(0xFF555555) : Colors.grey),
+      );
     }
     return Wrap(
       spacing: 8.0,
       runSpacing: 8.0,
       children: serviciosAdicionales.map((servicio) {
-        return _buildServiceChip(servicio.toString());
+        return _buildServiceChip(servicio.toString(), disponible);
       }).toList(),
     );
   }
 
-  // Helper para el chip de servicio
-  Widget _buildServiceChip(String servicio) {
+  // ✅ MÉTODO ACTUALIZADO CON DISPONIBILIDAD
+  Widget _buildServiceChip(String servicio, bool disponible) {
     final servicioLower = servicio.toLowerCase();
     IconData icon;
     Color color;
@@ -260,26 +335,30 @@ class _RoomDetailScreenState extends State<RoomDetailScreen> {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
       decoration: BoxDecoration(
-        color: color.withOpacity(0.1),
+        color: color.withOpacity(disponible ? 0.1 : 0.05),
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: color.withOpacity(0.3)),
+        border: Border.all(color: color.withOpacity(disponible ? 0.3 : 0.1)),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(icon, size: 18, color: color),
+          Icon(icon, size: 18, color: disponible ? color : Colors.grey),
           const SizedBox(width: 6),
           Text(
             servicio,
-            style: TextStyle(fontSize: 14, color: color, fontWeight: FontWeight.w600),
+            style: TextStyle(
+              fontSize: 14, 
+              color: disponible ? color : Colors.grey, 
+              fontWeight: FontWeight.w600
+            ),
           ),
         ],
       ),
     );
   }
 
-  // Helper para la barra de botones inferior fija
-  Widget _buildBottomButtonBar(BuildContext context, String idHabitacion, Map<String, dynamic> room) {
+  // ✅ MÉTODO ACTUALIZADO CON DISPONIBILIDAD
+  Widget _buildBottomButtonBar(BuildContext context, String idHabitacion, Map<String, dynamic> room, bool disponible) {
     return Positioned(
       bottom: 0,
       left: 0,
@@ -327,23 +406,27 @@ class _RoomDetailScreenState extends State<RoomDetailScreen> {
             
             if (_isAdmin) const SizedBox(width: 12),
 
-            // Botón Reservar Ahora (Para todos los usuarios)
+            // Botón Reservar Ahora (Solo si está disponible)
             Expanded(
               child: ElevatedButton.icon(
-                onPressed: () {
-                   Navigator.pushNamed(
+                onPressed: disponible ? () {
+                  Navigator.pushNamed(
                     context,
                     AppRoutes.reservationFormScreen,
                     arguments: room,
                   );
-                },
-                icon: const Icon(Icons.calendar_month, color: Colors.white),
-                label: const Text(
-                  'Reservar Ahora',
-                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                } : null, // ← DESHABILITAR SI NO ESTÁ DISPONIBLE
+                icon: Icon(Icons.calendar_month, color: disponible ? Colors.white : Colors.grey),
+                label: Text(
+                  disponible ? 'Reservar Ahora' : 'No Disponible',
+                  style: TextStyle(
+                    fontSize: 16, 
+                    fontWeight: FontWeight.bold,
+                    color: disponible ? Colors.white : Colors.grey,
+                  ),
                 ),
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFF00897B),
+                  backgroundColor: disponible ? Color(0xFF00897B) : Colors.grey.shade300,
                   foregroundColor: Colors.white,
                   padding: const EdgeInsets.symmetric(vertical: 14),
                   shape: RoundedRectangleBorder(

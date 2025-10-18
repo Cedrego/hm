@@ -1,13 +1,11 @@
-// lib/presentacion/room_list/reservation_list_screen.dart
-
 import 'package:flutter/material.dart';
 import '../../core/auth_service.dart'; 
 import '../custom_app_bar.dart'; 
 import '../app_drawer.dart'; 
 import '../../core/app_export.dart'; 
-import '../../core/api_service.dart'; // Para cargar reservas
-import 'package:intl/intl.dart'; // Importar intl para formatear fechas y dinero
-import 'user_profile_screen.dart'; // Asumiendo que tienes esta pantalla para ver el perfil del usuario
+import '../../core/firebase_service.dart';
+import 'package:intl/intl.dart';
+import 'user_profile_screen.dart';
 
 class ReservationListScreen extends StatefulWidget {
   final Map<String, dynamic> room;
@@ -19,15 +17,12 @@ class ReservationListScreen extends StatefulWidget {
 }
 
 class _ReservationListScreenState extends State<ReservationListScreen> {
-  // CLAVE GLOBAL para el Drawer
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
-
-  // La lista debe ser dinámica ya que es el resultado del API
-  List<dynamic> reservations = [];
+  final FirebaseService _firebaseService = FirebaseService();
   
+  List<Map<String, dynamic>> reservations = [];
   bool _isLoadingReservations = true;
   bool _isLoadingUserData = true;
-  
   Map<String, dynamic>? _userData;
   bool get _isAdmin => _userData?['rol'] == 'admin';
   final currencyFormatter = NumberFormat.currency(locale: 'es_ES', symbol: '\$', decimalDigits: 2);
@@ -40,7 +35,6 @@ class _ReservationListScreenState extends State<ReservationListScreen> {
     _loadReservations();
   }
 
-  // --- Lógica de Carga de Datos ---
   Future<void> _loadUserData() async {
     try {
       final userData = await AuthService.getUserData();
@@ -53,7 +47,6 @@ class _ReservationListScreenState extends State<ReservationListScreen> {
       if (!mounted) return;
       setState(() {
         _isLoadingUserData = false;
-        // Opcional: mostrar un error de carga de usuario
       });
     }
   }
@@ -66,42 +59,68 @@ class _ReservationListScreenState extends State<ReservationListScreen> {
     });
 
     try {
-      final idHabitacion = widget.room['idHabitacion'] ?? '';
+      final idHabitacion = widget.room['id'] ?? '';
       if (idHabitacion.isEmpty) {
         throw Exception('ID de habitación no encontrado.');
       }
       
-      final fetchedReservations = await ApiService.getReservasPorHabitacion(idHabitacion);
-      
-      if (!mounted) return;
-      setState(() {
-        reservations = fetchedReservations;
+      _firebaseService.getReservasPorHabitacion(idHabitacion).listen((listaReservas) {
+        if (mounted) {
+          setState(() {
+            reservations = listaReservas;
+            _isLoadingReservations = false;
+          });
+        }
+      }, onError: (error) {
+        if (mounted) {
+          setState(() {
+            _errorMessage = error.toString();
+            _isLoadingReservations = false;
+          });
+        }
       });
-
     } catch (e) {
       if (!mounted) return;
       setState(() {
         _errorMessage = e.toString().replaceFirst('Exception: ', '');
-      });
-    } finally {
-      if (!mounted) return;
-      setState(() {
         _isLoadingReservations = false;
       });
     }
   }
   
-  // --- Lógica de Navegación y Cierre de Sesión ---
-  void onLogoutPressed(BuildContext context) {
-    AuthService.logout();
-    Navigator.pushNamedAndRemoveUntil(context, AppRoutes.loginScreen, (route) => false);
+  Future<void> _onLogoutPressed() async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Confirmación'),
+        content: const Text('¿Está seguro de cerrar sesión?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancelar'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            style: TextButton.styleFrom(foregroundColor: Colors.red),
+            child: const Text('Cerrar sesión'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed == true && mounted) {
+      await AuthService.logout();
+      Navigator.pushNamedAndRemoveUntil(
+        context,
+        AppRoutes.loginScreen,
+        (route) => false,
+      );
+    }
   }
-  
+
   void _showReservationDetails(Map<String, dynamic> reservation) {
-    // Aquí puedes implementar una vista de detalles o un diálogo
     final user = reservation['usuario'] ?? {};
     if (user.isNotEmpty) {
-      // Navegar al perfil del usuario (si está disponible)
       Navigator.push(
         context,
         MaterialPageRoute(
@@ -109,16 +128,40 @@ class _ReservationListScreenState extends State<ReservationListScreen> {
         ),
       );
     } else {
-       ScaffoldMessenger.of(context).showSnackBar(
+      ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Datos de usuario no disponibles.')),
       );
     }
   }
 
+  Color _getStatusColor(String estado) {
+    switch (estado) {
+      case 'activa':
+        return Colors.green;
+      case 'cancelada':
+        return Colors.red;
+      case 'completada':
+        return Colors.blue;
+      default:
+        return Colors.grey;
+    }
+  }
+
+  String _getStatusText(String estado) {
+    switch (estado) {
+      case 'activa':
+        return 'Activa';
+      case 'cancelada':
+        return 'Cancelada';
+      case 'completada':
+        return 'Completada';
+      default:
+        return estado;
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
-    
-    // Si los datos de usuario no han cargado, mostrar un spinner
     if (_isLoadingUserData) {
       return const Scaffold(
         body: Center(child: CircularProgressIndicator()),
@@ -129,14 +172,14 @@ class _ReservationListScreenState extends State<ReservationListScreen> {
       key: _scaffoldKey,
       appBar: CustomAppBar(
         scaffoldKey: _scaffoldKey,
-        onLogoutPressed: () => onLogoutPressed(context),
+        onLogoutPressed: _onLogoutPressed,
         userData: _userData,
         isAdmin: _isAdmin,
       ),
       drawer: AppDrawer(
         userData: _userData,
         isAdmin: _isAdmin,
-        onLogoutPressed: () => onLogoutPressed(context),
+        onLogoutPressed: _onLogoutPressed,
       ),
       backgroundColor: const Color(0xFFF4F4F4),
       body: _isLoadingReservations
@@ -185,8 +228,10 @@ class _ReservationListScreenState extends State<ReservationListScreen> {
                       itemCount: reservations.length,
                       itemBuilder: (context, index) {
                         final reservation = reservations[index];
-                        final String userName = reservation['nombreUsuario'] ?? 'Usuario Desconocido';
+                        final String userName = reservation['nombreUsuario'] ?? 'Usuario';
                         final String checkIn = reservation['fechaCheckIn'] ?? 'N/A';
+                        final String checkOut = reservation['fechaCheckOut'] ?? 'N/A';
+                        final String estado = reservation['estado'] ?? 'activa';
                         final double total = (reservation['precioTotal'] as num?)?.toDouble() ?? 0.0;
 
                         return Card(
@@ -194,15 +239,39 @@ class _ReservationListScreenState extends State<ReservationListScreen> {
                           elevation: 2,
                           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                           child: ListTile(
-                            leading: const CircleAvatar(
-                              backgroundColor: Color(0xFF00897B),
-                              child: Icon(Icons.receipt_long, color: Colors.white),
+                            leading: CircleAvatar(
+                              backgroundColor: _getStatusColor(estado),
+                              child: const Icon(Icons.receipt_long, color: Colors.white),
                             ),
                             title: Text(
                               'Reserva de $userName',
                               style: const TextStyle(fontWeight: FontWeight.bold),
                             ),
-                            subtitle: Text('Check-in: $checkIn\nTotal: ${currencyFormatter.format(total)}'),
+                            subtitle: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text('Check-in: $checkIn'),
+                                Text('Check-out: $checkOut'),
+                                Text('Total: ${currencyFormatter.format(total)}'),
+                                const SizedBox(height: 4),
+                                Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                                  decoration: BoxDecoration(
+                                    color: _getStatusColor(estado).withOpacity(0.1),
+                                    borderRadius: BorderRadius.circular(12),
+                                    border: Border.all(color: _getStatusColor(estado)),
+                                  ),
+                                  child: Text(
+                                    _getStatusText(estado),
+                                    style: TextStyle(
+                                      fontSize: 12,
+                                      color: _getStatusColor(estado),
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
                             isThreeLine: true,
                             trailing: const Icon(Icons.arrow_forward_ios, size: 16),
                             onTap: () => _showReservationDetails(reservation),
