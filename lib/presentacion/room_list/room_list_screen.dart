@@ -15,7 +15,7 @@ class RoomListScreen extends StatefulWidget {
 
 class _RoomListScreenState extends State<RoomListScreen> {
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
-  final FirebaseService _firebaseService = FirebaseService();
+  final FirebaseService firebaseService = FirebaseService.instance;
 
   bool _isLoadingUserData = true;
   Map<String, dynamic>? _userData;
@@ -56,7 +56,7 @@ class _RoomListScreenState extends State<RoomListScreen> {
 
     try {
       // Escuchar el stream de habitaciones
-      _firebaseService.getHabitaciones().listen(
+      firebaseService.getHabitaciones().listen(
         (listaHabitaciones) {
           if (mounted) {
             setState(() {

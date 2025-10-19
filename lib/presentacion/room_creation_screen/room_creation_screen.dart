@@ -24,7 +24,7 @@ class RoomCreationScreen extends StatefulWidget {
 
 class _RoomCreationScreenState extends State<RoomCreationScreen> {
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
-  final FirebaseService _firebaseService = FirebaseService();
+  final FirebaseService _firebaseService = FirebaseService.instance;
 
   // Controladores
   final TextEditingController _nombreController = TextEditingController();

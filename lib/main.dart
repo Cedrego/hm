@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:firebase_core/firebase_core.dart';
 import 'package:hm/core/logger.dart';
+import 'package:hm/core/firebase_service.dart';
 import 'core/app_export.dart';
 
 var globalMessengerKey = GlobalKey<ScaffoldMessengerState>();
@@ -11,15 +11,15 @@ Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   SystemChrome.setPreferredOrientations([DeviceOrientation.portraitUp]);
 
-  await Firebase.initializeApp();
+  try {
+    await FirebaseService.instance.initialize();
+    AppLogger.i('✅ Firebase Service inicializado');
+  } catch (e) {
+    AppLogger.e('❌ Error Firebase: $e');
+  }
 
   final prefs = await SharedPreferences.getInstance();
   final isLoggedIn = prefs.getBool('isLoggedIn') ?? false;
-
-  AppLogger.i('🔥 Firebase inicializado correctamente');
-  AppLogger.i(
-    '🚀 Iniciando app en: ${isLoggedIn ? 'MainPage' : 'LoginScreen'}',
-  );
 
   runApp(
     MyApp(
@@ -30,7 +30,6 @@ Future<void> main() async {
 
 class MyApp extends StatelessWidget {
   final String initialRoute;
-
   const MyApp({super.key, required this.initialRoute});
 
   @override

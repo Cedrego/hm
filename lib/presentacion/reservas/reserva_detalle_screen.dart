@@ -12,7 +12,7 @@ class ReservaDetalleScreen extends StatefulWidget {
 }
 
 class _ReservaDetalleScreenState extends State<ReservaDetalleScreen> {
-  final FirebaseService _firebaseService = FirebaseService();
+  final FirebaseService _firebaseService = FirebaseService.instance;
   bool _isLoading = false;
   Map<String, dynamic>? _habitacion;
   bool _loadingHabitacion = true;

@@ -18,7 +18,7 @@ class ReservationListScreen extends StatefulWidget {
 
 class _ReservationListScreenState extends State<ReservationListScreen> {
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
-  final FirebaseService _firebaseService = FirebaseService();
+  final FirebaseService firebaseService = FirebaseService.instance;
 
   List<Map<String, dynamic>> reservations = [];
   bool _isLoadingReservations = true;
@@ -68,7 +68,7 @@ class _ReservationListScreenState extends State<ReservationListScreen> {
         throw Exception('ID de habitación no encontrado.');
       }
 
-      _firebaseService
+      firebaseService
           .getReservasPorHabitacion(idHabitacion)
           .listen(
             (listaReservas) {
@@ -133,37 +133,37 @@ class _ReservationListScreenState extends State<ReservationListScreen> {
   }
 
   void _showReservationDetails(Map<String, dynamic> reservation) async {
-    final userId = reservation['idUsuario'];
-
-    if (userId != null && userId is String) {
-      try {
-        final userData = await FirebaseService().getUserById(userId);
-
-        if (userData != null && mounted) {
-          Navigator.push(
-            context,
-            MaterialPageRoute(
-              builder: (_) => UserProfileScreen(user: userData),
-            ),
-          );
-        } else {
-          _showError('Usuario no encontrado');
-        }
-      } catch (e) {
-        _showError('Error al cargar datos del usuario');
+  final userId = reservation['idUsuario'];
+  
+  if (userId != null && userId is String) {
+    try {
+      final userData = await firebaseService.getUserById(userId);
+      
+      if (userData != null && mounted) {
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (_) => UserProfileScreen(user: userData),
+          ),
+        );
+      } else {
+        _showError('Usuario no encontrado');
       }
-    } else {
-      _showError('ID de usuario no disponible');
+    } catch (e) {
+      _showError('Error al cargar datos del usuario');
     }
+  } else {
+    _showError('ID de usuario no disponible');
   }
+}
 
-  void _showError(String message) {
-    if (mounted) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text(message)));
-    }
+void _showError(String message) {
+  if (mounted) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(message)),
+    );
   }
+}
 
   Color _getStatusColor(String estado) {
     switch (estado) {

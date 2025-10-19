@@ -19,7 +19,7 @@ class _ReservationFormScreenState extends State<ReservationFormScreen> {
   bool isLoading = false;
   String? _errorMessage;
   Map<String, dynamic>? _userData;
-  final FirebaseService _firebaseService = FirebaseService();
+  final FirebaseService _firebaseService = FirebaseService.instance;
   final currencyFormatter = NumberFormat.currency(
     locale: 'es_ES',
     symbol: '\$',

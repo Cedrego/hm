@@ -26,7 +26,7 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
   final TextEditingController contactController = TextEditingController();
 
   final GlobalKey<FormState> formKey = GlobalKey<FormState>();
-  final FirebaseService _firebaseService = FirebaseService();
+  final FirebaseService _firebaseService = FirebaseService.instance;
   bool _isLoading = false;
 
   // Imagen

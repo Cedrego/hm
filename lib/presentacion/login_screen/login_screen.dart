@@ -2,8 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import '../../core/app_export.dart';
+import '../../core/firebase_service.dart';
 import '../../widgets/register_form_container.dart';
-import '../../core//firebase_service.dart';
 import '../../core/auth_service.dart';
 
 class LoginScreen extends StatefulWidget {
@@ -17,7 +17,7 @@ class _LoginScreenState extends State<LoginScreen> {
   final TextEditingController emailController = TextEditingController();
   final TextEditingController passwordController = TextEditingController();
   final GlobalKey<FormState> _formKey = GlobalKey<FormState>();
-  final FirebaseService _firebaseService = FirebaseService();
+  final firebaseService = FirebaseService.instance;
   bool _isLoading = false;
 
   @override
@@ -216,7 +216,7 @@ class _LoginScreenState extends State<LoginScreen> {
     });
 
     try {
-      final response = await _firebaseService.login(
+      final response = await firebaseService.login(
         emailController.text.trim(),
         passwordController.text,
       );

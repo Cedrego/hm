@@ -1,17 +1,58 @@
+// lib/core/firebase_service.dart
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_core/firebase_core.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:hm/core/logger.dart';
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 
 class FirebaseService {
-  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+  static FirebaseService? _instance;
+  FirebaseService._();
+  
+  static FirebaseService get instance {
+    _instance ??= FirebaseService._();
+    return _instance!;
+  }
 
-  // =========================================================================
-  // 👤 USUARIOS
-  // =========================================================================
+  late final FirebaseFirestore _firestore;
+  bool _isInitialized = false;
 
-  // Login - Verificar credenciales
+  Future<void> initialize() async {
+    try {
+      if (kIsWeb) {
+        await Firebase.initializeApp(
+          options: const FirebaseOptions(
+            apiKey: "AIzaSyAxHo67XQDkjNe9lLIN_qvVmAQngU9vUOs",
+            authDomain: "hostel-mochileros.firebaseapp.com",
+            projectId: "hostel-mochileros",
+            storageBucket: "hostel-mochileros.firebasestorage.app",
+            messagingSenderId: "103969422555",
+            appId: "1:103969422555:web:d045d43a7dfb7cea6c60fe",
+            measurementId: "G-WS6RCDJ0MZ",
+          ),
+        );
+      } else {
+        await Firebase.initializeApp();
+      }
+      
+      _firestore = FirebaseFirestore.instance;
+      _isInitialized = true;
+    } catch (e) {
+      throw Exception('No se pudo inicializar Firebase: $e');
+    }
+  }
+
+  void _checkInitialization() {
+    if (!_isInitialized) {
+      throw Exception('FirebaseService no está inicializado');
+    }
+  }
+
+  // MÉTODO LOGIN (solo este por ahora para probar)
   Future<Map<String, dynamic>> login(String email, String password) async {
+    _checkInitialization();
+    
     try {
       final query = await _firestore
           .collection('usuarios')
@@ -27,7 +68,6 @@ class FirebaseService {
       final userDoc = query.docs.first;
       final userData = userDoc.data();
 
-      // Eliminar password del response por seguridad
       final userDataSafe = Map<String, dynamic>.from(userData);
       userDataSafe.remove('password');
 
@@ -43,6 +83,8 @@ class FirebaseService {
 
   // Registro
   Future<Map<String, dynamic>> registro(Map<String, dynamic> datos) async {
+    _checkInitialization(); // ✅ VERIFICAR INICIALIZACIÓN
+    
     try {
       // Verificar si el email ya existe
       final emailQuery = await _firestore
@@ -98,6 +140,8 @@ class FirebaseService {
 
   // Obtener perfil de usuario
   Future<Map<String, dynamic>> getPerfil(String userId) async {
+    _checkInitialization(); // ✅ VERIFICAR INICIALIZACIÓN
+    
     try {
       final doc = await _firestore.collection('usuarios').doc(userId).get();
 
@@ -119,6 +163,8 @@ class FirebaseService {
 
   // Obtener usuario por ID
   Future<Map<String, dynamic>?> getUserById(String userId) async {
+    _checkInitialization(); // ✅ VERIFICAR INICIALIZACIÓN
+    
     try {
       AppLogger.i('🔍 Buscando usuario con ID: $userId');
 
@@ -158,6 +204,8 @@ class FirebaseService {
     required List<String> servicios,
     String? imagenBase64,
   }) async {
+    _checkInitialization(); // ✅ VERIFICAR INICIALIZACIÓN
+    
     try {
       String? imagenUrl;
 
@@ -198,6 +246,8 @@ class FirebaseService {
 
   // Obtener todas las habitaciones
   Stream<List<Map<String, dynamic>>> getHabitaciones() {
+    _checkInitialization(); // ✅ VERIFICAR INICIALIZACIÓN
+    
     return _firestore
         .collection('habitaciones')
         .snapshots()
@@ -228,6 +278,8 @@ class FirebaseService {
     required String fechaCheckIn,
     required String fechaCheckOut,
   }) async {
+    _checkInitialization(); // ✅ VERIFICAR INICIALIZACIÓN
+    
     try {
       final habitacion = await getHabitacionPorId(idHabitacion);
       final precioTotal = _calcularPrecioTotal(
@@ -279,6 +331,8 @@ class FirebaseService {
   Stream<List<Map<String, dynamic>>> getReservasPorHabitacion(
     String habitacionId,
   ) {
+    _checkInitialization(); // ✅ VERIFICAR INICIALIZACIÓN
+    
     return _firestore
         .collection('reservas')
         .where('idHabitacion', isEqualTo: habitacionId)
@@ -294,6 +348,8 @@ class FirebaseService {
 
   // Obtener reservas por usuario
   Stream<List<Map<String, dynamic>>> getReservasPorUsuario(String usuarioId) {
+    _checkInitialization(); // ✅ VERIFICAR INICIALIZACIÓN
+    
     return _firestore
         .collection('reservas')
         .where('idUsuario', isEqualTo: usuarioId)
@@ -309,6 +365,8 @@ class FirebaseService {
 
   // Cancelar reserva
   Future<void> cancelarReserva(String reservaId) async {
+    _checkInitialization(); // ✅ VERIFICAR INICIALIZACIÓN
+    
     await _firestore.collection('reservas').doc(reservaId).update({
       'estado': 'cancelada',
       'fechaCancelacion': FieldValue.serverTimestamp(),
@@ -317,6 +375,8 @@ class FirebaseService {
 
   // MÉTODO PARA OBTENER TODAS LAS RESERVAS (Habitacion mas popular)
   Future<List<Map<String, dynamic>>> getTodasLasReservas() async {
+    _checkInitialization(); // ✅ VERIFICAR INICIALIZACIÓN
+    
     try {
       final querySnapshot = await _firestore
           .collection('reservas')
@@ -363,8 +423,7 @@ class FirebaseService {
 
       final request = http.MultipartRequest('POST', uri)
         ..fields['upload_preset'] = uploadPreset
-        ..fields['folder'] =
-            subcarpeta // ← SUBCARPETA CORREGIDA
+        ..fields['folder'] = subcarpeta
         ..files.add(
           http.MultipartFile.fromString(
             'file',
@@ -396,6 +455,8 @@ class FirebaseService {
 
   // Método para probar la conexión
   Future<void> probarConexion() async {
+    _checkInitialization(); // ✅ VERIFICAR INICIALIZACIÓN
+    
     try {
       await _firestore.collection('prueba').add({
         'mensaje': 'Conexión exitosa desde Hostel Mochileros',
@@ -409,6 +470,8 @@ class FirebaseService {
 
   // Obtener habitación por ID
   Future<Map<String, dynamic>?> getHabitacionPorId(String habitacionId) async {
+    _checkInitialization(); // ✅ VERIFICAR INICIALIZACIÓN
+    
     try {
       final doc = await _firestore
           .collection('habitaciones')

@@ -13,7 +13,7 @@ class MisReservasScreen extends StatefulWidget {
 }
 
 class _MisReservasScreenState extends State<MisReservasScreen> {
-  final FirebaseService _firebaseService = FirebaseService();
+  final FirebaseService _firebaseService = FirebaseService.instance;
   List<Map<String, dynamic>> reservas = [];
   bool isLoading = true;
   String errorMessage = '';
