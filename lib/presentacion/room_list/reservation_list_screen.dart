@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
-import '../../core/auth_service.dart'; 
-import '../custom_app_bar.dart'; 
-import '../app_drawer.dart'; 
-import '../../core/app_export.dart'; 
+import '../../core/auth_service.dart';
+import '../custom_app_bar.dart';
+import '../app_drawer.dart';
+import '../../core/app_export.dart';
 import '../../core/firebase_service.dart';
 import 'package:intl/intl.dart';
 import 'user_profile_screen.dart';
@@ -19,13 +19,17 @@ class ReservationListScreen extends StatefulWidget {
 class _ReservationListScreenState extends State<ReservationListScreen> {
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
   final FirebaseService _firebaseService = FirebaseService();
-  
+
   List<Map<String, dynamic>> reservations = [];
   bool _isLoadingReservations = true;
   bool _isLoadingUserData = true;
   Map<String, dynamic>? _userData;
   bool get _isAdmin => _userData?['rol'] == 'admin';
-  final currencyFormatter = NumberFormat.currency(locale: 'es_ES', symbol: '\$', decimalDigits: 2);
+  final currencyFormatter = NumberFormat.currency(
+    locale: 'es_ES',
+    symbol: '\$',
+    decimalDigits: 2,
+  );
   String _errorMessage = '';
 
   @override
@@ -63,22 +67,27 @@ class _ReservationListScreenState extends State<ReservationListScreen> {
       if (idHabitacion.isEmpty) {
         throw Exception('ID de habitación no encontrado.');
       }
-      
-      _firebaseService.getReservasPorHabitacion(idHabitacion).listen((listaReservas) {
-        if (mounted) {
-          setState(() {
-            reservations = listaReservas;
-            _isLoadingReservations = false;
-          });
-        }
-      }, onError: (error) {
-        if (mounted) {
-          setState(() {
-            _errorMessage = error.toString();
-            _isLoadingReservations = false;
-          });
-        }
-      });
+
+      _firebaseService
+          .getReservasPorHabitacion(idHabitacion)
+          .listen(
+            (listaReservas) {
+              if (mounted) {
+                setState(() {
+                  reservations = listaReservas;
+                  _isLoadingReservations = false;
+                });
+              }
+            },
+            onError: (error) {
+              if (mounted) {
+                setState(() {
+                  _errorMessage = error.toString();
+                  _isLoadingReservations = false;
+                });
+              }
+            },
+          );
     } catch (e) {
       if (!mounted) return;
       setState(() {
@@ -87,7 +96,7 @@ class _ReservationListScreenState extends State<ReservationListScreen> {
       });
     }
   }
-  
+
   Future<void> _onLogoutPressed() async {
     final confirmed = await showDialog<bool>(
       context: context,
@@ -108,13 +117,18 @@ class _ReservationListScreenState extends State<ReservationListScreen> {
       ),
     );
 
-    if (confirmed == true && mounted) {
+    if (confirmed == true) {
       await AuthService.logout();
-      Navigator.pushNamedAndRemoveUntil(
-        context,
-        AppRoutes.loginScreen,
-        (route) => false,
-      );
+
+      if (!mounted) return;
+
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        Navigator.pushNamedAndRemoveUntil(
+          context,
+          AppRoutes.loginScreen,
+          (route) => false,
+        );
+      });
     }
   }
 
@@ -123,9 +137,7 @@ class _ReservationListScreenState extends State<ReservationListScreen> {
     if (user.isNotEmpty) {
       Navigator.push(
         context,
-        MaterialPageRoute(
-          builder: (_) => UserProfileScreen(user: user),
-        ),
+        MaterialPageRoute(builder: (_) => UserProfileScreen(user: user)),
       );
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -163,9 +175,7 @@ class _ReservationListScreenState extends State<ReservationListScreen> {
   @override
   Widget build(BuildContext context) {
     if (_isLoadingUserData) {
-      return const Scaffold(
-        body: Center(child: CircularProgressIndicator()),
-      );
+      return const Scaffold(body: Center(child: CircularProgressIndicator()));
     }
 
     return Scaffold(
@@ -185,100 +195,120 @@ class _ReservationListScreenState extends State<ReservationListScreen> {
       body: _isLoadingReservations
           ? const Center(child: CircularProgressIndicator())
           : _errorMessage.isNotEmpty
-              ? Center(
-                  child: Padding(
-                    padding: const EdgeInsets.all(24),
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
+          ? Center(
+              child: Padding(
+                padding: const EdgeInsets.all(24),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Icon(
+                      Icons.error_outline,
+                      color: Colors.red,
+                      size: 50,
+                    ),
+                    const SizedBox(height: 16),
+                    Text(
+                      'Error al cargar reservas: $_errorMessage',
+                      textAlign: TextAlign.center,
+                      style: const TextStyle(fontSize: 16),
+                    ),
+                    const SizedBox(height: 16),
+                    ElevatedButton.icon(
+                      onPressed: _loadReservations,
+                      icon: const Icon(Icons.refresh),
+                      label: const Text('Reintentar'),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFF00897B),
+                        foregroundColor: Colors.white,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            )
+          : reservations.isEmpty
+          ? Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(Icons.event_busy, size: 80, color: Colors.grey.shade400),
+                  const SizedBox(height: 16),
+                  const Text(
+                    'No hay reservas para esta habitación',
+                    style: TextStyle(fontSize: 18, color: Color(0xFF555555)),
+                  ),
+                ],
+              ),
+            )
+          : ListView.builder(
+              padding: const EdgeInsets.symmetric(vertical: 8),
+              itemCount: reservations.length,
+              itemBuilder: (context, index) {
+                final reservation = reservations[index];
+                final String userName =
+                    reservation['nombreUsuario'] ?? 'Usuario';
+                final String checkIn = reservation['fechaCheckIn'] ?? 'N/A';
+                final String checkOut = reservation['fechaCheckOut'] ?? 'N/A';
+                final String estado = reservation['estado'] ?? 'activa';
+                final double total =
+                    (reservation['precioTotal'] as num?)?.toDouble() ?? 0.0;
+
+                return Card(
+                  margin: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 6,
+                  ),
+                  elevation: 2,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: ListTile(
+                    leading: CircleAvatar(
+                      backgroundColor: _getStatusColor(estado),
+                      child: const Icon(
+                        Icons.receipt_long,
+                        color: Colors.white,
+                      ),
+                    ),
+                    title: Text(
+                      'Reserva de $userName',
+                      style: const TextStyle(fontWeight: FontWeight.bold),
+                    ),
+                    subtitle: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        const Icon(Icons.error_outline, color: Colors.red, size: 50),
-                        const SizedBox(height: 16),
-                        Text(
-                          'Error al cargar reservas: $_errorMessage',
-                          textAlign: TextAlign.center,
-                          style: const TextStyle(fontSize: 16),
-                        ),
-                        const SizedBox(height: 16),
-                        ElevatedButton.icon(
-                          onPressed: _loadReservations,
-                          icon: const Icon(Icons.refresh),
-                          label: const Text('Reintentar'),
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: const Color(0xFF00897B),
-                            foregroundColor: Colors.white,
+                        Text('Check-in: $checkIn'),
+                        Text('Check-out: $checkOut'),
+                        Text('Total: ${currencyFormatter.format(total)}'),
+                        const SizedBox(height: 4),
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 8,
+                            vertical: 2,
+                          ),
+                          decoration: BoxDecoration(
+                            color: _getStatusColor(estado).withAlpha(26),
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(color: _getStatusColor(estado)),
+                          ),
+                          child: Text(
+                            _getStatusText(estado),
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: _getStatusColor(estado),
+                              fontWeight: FontWeight.bold,
+                            ),
                           ),
                         ),
                       ],
                     ),
+                    isThreeLine: true,
+                    trailing: const Icon(Icons.arrow_forward_ios, size: 16),
+                    onTap: () => _showReservationDetails(reservation),
                   ),
-                )
-              : reservations.isEmpty
-                  ? Center(
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Icon(Icons.event_busy, size: 80, color: Colors.grey.shade400),
-                          const SizedBox(height: 16),
-                          const Text('No hay reservas para esta habitación', style: TextStyle(fontSize: 18, color: Color(0xFF555555))),
-                        ],
-                      ),
-                    )
-                  : ListView.builder(
-                      padding: const EdgeInsets.symmetric(vertical: 8),
-                      itemCount: reservations.length,
-                      itemBuilder: (context, index) {
-                        final reservation = reservations[index];
-                        final String userName = reservation['nombreUsuario'] ?? 'Usuario';
-                        final String checkIn = reservation['fechaCheckIn'] ?? 'N/A';
-                        final String checkOut = reservation['fechaCheckOut'] ?? 'N/A';
-                        final String estado = reservation['estado'] ?? 'activa';
-                        final double total = (reservation['precioTotal'] as num?)?.toDouble() ?? 0.0;
-
-                        return Card(
-                          margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                          elevation: 2,
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                          child: ListTile(
-                            leading: CircleAvatar(
-                              backgroundColor: _getStatusColor(estado),
-                              child: const Icon(Icons.receipt_long, color: Colors.white),
-                            ),
-                            title: Text(
-                              'Reserva de $userName',
-                              style: const TextStyle(fontWeight: FontWeight.bold),
-                            ),
-                            subtitle: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text('Check-in: $checkIn'),
-                                Text('Check-out: $checkOut'),
-                                Text('Total: ${currencyFormatter.format(total)}'),
-                                const SizedBox(height: 4),
-                                Container(
-                                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                                  decoration: BoxDecoration(
-                                    color: _getStatusColor(estado).withOpacity(0.1),
-                                    borderRadius: BorderRadius.circular(12),
-                                    border: Border.all(color: _getStatusColor(estado)),
-                                  ),
-                                  child: Text(
-                                    _getStatusText(estado),
-                                    style: TextStyle(
-                                      fontSize: 12,
-                                      color: _getStatusColor(estado),
-                                      fontWeight: FontWeight.bold,
-                                    ),
-                                  ),
-                                ),
-                              ],
-                            ),
-                            isThreeLine: true,
-                            trailing: const Icon(Icons.arrow_forward_ios, size: 16),
-                            onTap: () => _showReservationDetails(reservation),
-                          ),
-                        );
-                      },
-                    ),
+                );
+              },
+            ),
       floatingActionButton: FloatingActionButton(
         onPressed: _loadReservations,
         backgroundColor: const Color(0xFF00897B),

@@ -16,16 +16,12 @@ class AppDrawer extends StatelessWidget {
 
   Widget _buildAvatar() {
     final String? imagenUrl = userData?['imagenUrl'];
-    
+
     if (imagenUrl == null || imagenUrl.isEmpty || imagenUrl == 'vacio') {
       return CircleAvatar(
         radius: 30,
         backgroundColor: Colors.white,
-        child: Icon(
-          Icons.person, 
-          size: 30, 
-          color: Colors.blue[700],
-        ),
+        child: Icon(Icons.person, size: 30, color: Colors.blue[700]),
       );
     }
 
@@ -43,9 +39,7 @@ class AppDrawer extends StatelessWidget {
         padding: EdgeInsets.zero,
         children: [
           DrawerHeader(
-            decoration: BoxDecoration(
-              color: Colors.blue[700],
-            ),
+            decoration: BoxDecoration(color: Colors.blue[700]),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               mainAxisAlignment: MainAxisAlignment.end,
@@ -72,7 +66,7 @@ class AppDrawer extends StatelessWidget {
                           Text(
                             userData?['email'] ?? '',
                             style: TextStyle(
-                              color: Colors.white.withOpacity(0.8),
+                              color: Colors.white.withAlpha(204),
                               fontSize: 14,
                             ),
                             maxLines: 1,
@@ -85,7 +79,7 @@ class AppDrawer extends StatelessWidget {
                               vertical: 2,
                             ),
                             decoration: BoxDecoration(
-                              color: Colors.white.withOpacity(0.2),
+                              color: Colors.white.withAlpha(51),
                               borderRadius: BorderRadius.circular(12),
                             ),
                             child: Text(
@@ -143,15 +137,19 @@ class AppDrawer extends StatelessWidget {
             title: const Text('Mi Perfil'),
             onTap: () {
               Navigator.pop(context);
-              Navigator.pushNamed(context, AppRoutes.profileScreen, arguments: userData); 
+              Navigator.pushNamed(
+                context,
+                AppRoutes.profileScreen,
+                arguments: userData,
+              );
             },
           ),
           const Divider(),
           ListTile(
             leading: const Icon(Icons.logout, color: Colors.red),
             title: const Text(
-              'Cerrar Sesión', 
-              style: TextStyle(color: Colors.red)
+              'Cerrar Sesión',
+              style: TextStyle(color: Colors.red),
             ),
             onTap: () {
               Navigator.pop(context);

@@ -31,12 +31,16 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final String nick = widget.user['nick'] ?? widget.user['nombre'] ?? 'Usuario';
+    final String nick =
+        widget.user['nick'] ?? widget.user['nombre'] ?? 'Usuario';
     final String nombre = widget.user['nombre'] ?? 'Sin nombre';
     final String email = widget.user['email'] ?? 'Sin email';
-    final String di = widget.user['di'] ?? widget.user['cedula'] ?? 'Sin documento';
-    final String contacto = widget.user['telefono'] ?? widget.user['contacto'] ?? 'Sin contacto';
-    final String avatarUrl = widget.user['avatarUrl'] ?? widget.user['avatar'] ?? '';
+    final String di =
+        widget.user['di'] ?? widget.user['cedula'] ?? 'Sin documento';
+    final String contacto =
+        widget.user['telefono'] ?? widget.user['contacto'] ?? 'Sin contacto';
+    final String avatarUrl =
+        widget.user['avatarUrl'] ?? widget.user['avatar'] ?? '';
 
     return Scaffold(
       body: Container(
@@ -55,7 +59,11 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
                     const Expanded(
                       child: Text(
                         'Perfil de Usuario',
-                        style: TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.bold),
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 20,
+                          fontWeight: FontWeight.bold,
+                        ),
                         textAlign: TextAlign.center,
                       ),
                     ),
@@ -80,15 +88,21 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
                                     width: 120,
                                     height: 120,
                                     fit: BoxFit.cover,
-                                    errorBuilder: (_, __, ___) => Text(
+                                    errorBuilder: (_, _, _) => Text(
                                       nombre[0].toUpperCase(),
-                                      style: const TextStyle(fontSize: 48, color: Color(0xFF00897B)),
+                                      style: const TextStyle(
+                                        fontSize: 48,
+                                        color: Color(0xFF00897B),
+                                      ),
                                     ),
                                   ),
                                 )
                               : Text(
                                   nombre[0].toUpperCase(),
-                                  style: const TextStyle(fontSize: 48, color: Color(0xFF00897B)),
+                                  style: const TextStyle(
+                                    fontSize: 48,
+                                    color: Color(0xFF00897B),
+                                  ),
                                 ),
                         ),
                         const SizedBox(height: 24),
@@ -116,7 +130,11 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
 
                         const Text(
                           'Mis Reservas',
-                          style: TextStyle(color: Colors.white, fontSize: 22, fontWeight: FontWeight.bold),
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontSize: 22,
+                            fontWeight: FontWeight.bold,
+                          ),
                         ),
                         const SizedBox(height: 16),
 
@@ -129,7 +147,11 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
                               padding: EdgeInsets.all(32),
                               child: Column(
                                 children: [
-                                  Icon(Icons.event_busy, size: 60, color: Colors.grey),
+                                  Icon(
+                                    Icons.event_busy,
+                                    size: 60,
+                                    color: Colors.grey,
+                                  ),
                                   SizedBox(height: 16),
                                   Text('No hay reservas registradas'),
                                 ],
@@ -137,7 +159,9 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
                             ),
                           )
                         else
-                          ...reservations.map((res) => _buildReservationCard(res)),
+                          ...reservations.map(
+                            (res) => _buildReservationCard(res),
+                          ),
                       ],
                     ),
                   ),

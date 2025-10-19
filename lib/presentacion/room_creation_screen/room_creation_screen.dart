@@ -2,11 +2,12 @@ import 'dart:convert';
 import 'dart:io';
 import 'package:image_picker/image_picker.dart';
 import 'package:flutter/material.dart';
-import '../custom_app_bar.dart'; 
-import '../app_drawer.dart'; 
-import '../../core/auth_service.dart'; 
+import '../custom_app_bar.dart';
+import '../app_drawer.dart';
+import '../../core/auth_service.dart';
 import '../../core/app_export.dart';
 import '../../core/firebase_service.dart';
+import 'package:hm/core/logger.dart';
 
 // Constantes de Color Simplificadas
 const Color _kPrimaryColor = Color(0xFF008080);
@@ -24,28 +25,29 @@ class RoomCreationScreen extends StatefulWidget {
 class _RoomCreationScreenState extends State<RoomCreationScreen> {
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
   final FirebaseService _firebaseService = FirebaseService();
-  
+
   // Controladores
   final TextEditingController _nombreController = TextEditingController();
   final TextEditingController _descripcionController = TextEditingController();
-  final TextEditingController _servicioAdicionalController = TextEditingController();
-   final TextEditingController _precioController = TextEditingController(); 
+  final TextEditingController _servicioAdicionalController =
+      TextEditingController();
+  final TextEditingController _precioController = TextEditingController();
   // Estados de la habitación
   bool _servicioAlCuarto = false;
   bool _jacuzzi = false;
   bool _minibar = false;
-  List<Map<String, dynamic>> _serviciosAdicionales = [];
-  
+  final List<Map<String, dynamic>> _serviciosAdicionales = [];
+
   double _precio = 40.90;
-  
+
   // 🆕 Variables para manejo de imagen
   final ImagePicker _picker = ImagePicker();
   File? _imagenFile;
   String? _imagenBase64;
 
   // Estados de carga y datos de usuario
-  bool _isLoadingCreation = false; 
-  bool _isLoadingUserData = true; 
+  bool _isLoadingCreation = false;
+  bool _isLoadingUserData = true;
   Map<String, dynamic>? _userData;
 
   bool get _isAdmin => _userData?['rol'] == 'admin';
@@ -53,8 +55,10 @@ class _RoomCreationScreenState extends State<RoomCreationScreen> {
   @override
   void initState() {
     super.initState();
-    _loadUserData(); 
-    _precioController.text = _precio.toStringAsFixed(2); // 🆕 Inicializar el texto del precio
+    _loadUserData();
+    _precioController.text = _precio.toStringAsFixed(
+      2,
+    ); // 🆕 Inicializar el texto del precio
   }
 
   Future<void> _loadUserData() async {
@@ -77,8 +81,8 @@ class _RoomCreationScreenState extends State<RoomCreationScreen> {
   // 🆕 Método para seleccionar imagen
   Future<void> _seleccionarImagen() async {
     try {
-      print('📷 Seleccionando imagen de habitación...');
-      
+      AppLogger.i('📷 Seleccionando imagen de habitación...');
+
       final pickedFile = await _picker.pickImage(
         source: ImageSource.gallery,
         maxWidth: 1200,
@@ -92,14 +96,16 @@ class _RoomCreationScreenState extends State<RoomCreationScreen> {
           _imagenFile = File(pickedFile.path);
           _imagenBase64 = base64Encode(bytes);
         });
-        
-        print('✅ Imagen de habitación seleccionada: ${bytes.length} bytes');
+
+        AppLogger.d(
+          '✅ Imagen de habitación seleccionada: ${bytes.length} bytes',
+        );
       } else {
-        print('⚠️ No se seleccionó ninguna imagen');
+        AppLogger.w('⚠️ No se seleccionó ninguna imagen');
       }
     } catch (e) {
-      print('❌ Error al seleccionar imagen: $e');
-      
+      AppLogger.e('❌ Error al seleccionar imagen: $e');
+
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -122,7 +128,7 @@ class _RoomCreationScreenState extends State<RoomCreationScreen> {
 
   void _agregarServicioAdicional() {
     final nuevoServicio = _servicioAdicionalController.text.trim();
-    
+
     if (nuevoServicio.isNotEmpty) {
       setState(() {
         _serviciosAdicionales.add({
@@ -131,7 +137,7 @@ class _RoomCreationScreenState extends State<RoomCreationScreen> {
         });
         _servicioAdicionalController.clear();
       });
-      
+
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text('Servicio "$nuevoServicio" agregado'),
@@ -142,7 +148,7 @@ class _RoomCreationScreenState extends State<RoomCreationScreen> {
     }
   }
 
-  Future<void> _onLogoutPressed(BuildContext context) async {
+  Future<void> _onLogoutPressed() async {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
@@ -162,13 +168,18 @@ class _RoomCreationScreenState extends State<RoomCreationScreen> {
       ),
     );
 
-    if (confirmed == true && mounted) {
+    if (confirmed == true) {
       await AuthService.logout();
-      Navigator.pushNamedAndRemoveUntil(
-        context,
-        AppRoutes.loginScreen,
-        (route) => false,
-      );
+
+      if (!mounted) return;
+
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        Navigator.pushNamedAndRemoveUntil(
+          context,
+          AppRoutes.loginScreen,
+          (route) => false,
+        );
+      });
     }
   }
 
@@ -177,36 +188,38 @@ class _RoomCreationScreenState extends State<RoomCreationScreen> {
     if (_isLoadingUserData) {
       return const Scaffold(body: Center(child: CircularProgressIndicator()));
     }
-    
+
     if (!_isAdmin) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
-        _mostrarError('Acceso denegado: solo administradores pueden crear habitaciones.');
+        _mostrarError(
+          'Acceso denegado: solo administradores pueden crear habitaciones.',
+        );
         if (Navigator.canPop(context)) {
-          Navigator.pop(context); 
+          Navigator.pop(context);
         } else {
-          Navigator.pushReplacementNamed(context, AppRoutes.mainPage); 
+          Navigator.pushReplacementNamed(context, AppRoutes.mainPage);
         }
       });
-      return const SizedBox.shrink(); 
+      return const SizedBox.shrink();
     }
 
     return Scaffold(
       key: _scaffoldKey,
       backgroundColor: _kPrimaryColor,
-      
+
       appBar: CustomAppBar(
         scaffoldKey: _scaffoldKey,
-        onLogoutPressed: () => _onLogoutPressed(context),
+        onLogoutPressed: () => _onLogoutPressed,
         userData: _userData,
         isAdmin: _isAdmin,
       ),
-      
+
       drawer: AppDrawer(
         userData: _userData,
         isAdmin: _isAdmin,
-        onLogoutPressed: () => _onLogoutPressed(context),
+        onLogoutPressed: () => _onLogoutPressed,
       ),
-      
+
       body: SingleChildScrollView(
         child: Padding(
           padding: const EdgeInsets.all(20.0),
@@ -217,7 +230,7 @@ class _RoomCreationScreenState extends State<RoomCreationScreen> {
               borderRadius: BorderRadius.circular(10.0),
               boxShadow: [
                 BoxShadow(
-                  color: Colors.black.withOpacity(0.1),
+                  color: Colors.black.withAlpha(26),
                   blurRadius: 10,
                   offset: const Offset(0, 5),
                 ),
@@ -237,26 +250,53 @@ class _RoomCreationScreenState extends State<RoomCreationScreen> {
                 const SizedBox(height: 20),
 
                 // Nombre
-                const Text('Nombre de la Habitación', style: TextStyle(color: _kBlackText, fontWeight: FontWeight.w600)),
+                const Text(
+                  'Nombre de la Habitación',
+                  style: TextStyle(
+                    color: _kBlackText,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
                 _buildTextField(
                   'Ej: Habitación Deluxe 1',
                   controller: _nombreController,
                 ),
 
                 // Descripción
-                const Text('Descripción', style: TextStyle(color: _kBlackText, fontWeight: FontWeight.w600)),
+                const Text(
+                  'Descripción',
+                  style: TextStyle(
+                    color: _kBlackText,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
                 _buildDescriptionField(),
 
                 // Servicios Adicionales Dinámicos
-                const Text('Agregar Servicio (Opcional)', style: TextStyle(color: _kBlackText, fontWeight: FontWeight.w600)),
+                const Text(
+                  'Agregar Servicio (Opcional)',
+                  style: TextStyle(
+                    color: _kBlackText,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
                 _buildServicioAdicionalField(),
 
                 const SizedBox(height: 10),
-                const Text('Servicios Incluidos', style: TextStyle(color: _kBlackText, fontSize: 16, fontWeight: FontWeight.bold)),
+                const Text(
+                  'Servicios Incluidos',
+                  style: TextStyle(
+                    color: _kBlackText,
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
                 const Divider(color: Colors.grey),
 
                 // Checkboxes predefinidos
-                _buildCheckboxRow('Servicio al cuarto', _servicioAlCuarto, (bool? newValue) {
+                _buildCheckboxRow('Servicio al cuarto', _servicioAlCuarto, (
+                  bool? newValue,
+                ) {
                   setState(() => _servicioAlCuarto = newValue ?? false);
                 }),
                 _buildCheckboxRow('Jacuzzi', _jacuzzi, (bool? newValue) {
@@ -270,42 +310,57 @@ class _RoomCreationScreenState extends State<RoomCreationScreen> {
                 ..._serviciosAdicionales.asMap().entries.map((entry) {
                   int index = entry.key;
                   Map<String, dynamic> servicio = entry.value;
-                  
+
                   return _buildCheckboxRowConEliminar(
                     servicio['nombre'],
                     servicio['seleccionado'],
                     (bool? newValue) {
                       setState(() {
-                        _serviciosAdicionales[index]['seleccionado'] = newValue ?? false;
+                        _serviciosAdicionales[index]['seleccionado'] =
+                            newValue ?? false;
                       });
                     },
                     () {
                       setState(() {
                         _serviciosAdicionales.removeAt(index);
                       });
-                      
+
                       ScaffoldMessenger.of(context).showSnackBar(
                         SnackBar(
-                          content: Text('Servicio "${servicio['nombre']}" eliminado'),
+                          content: Text(
+                            'Servicio "${servicio['nombre']}" eliminado',
+                          ),
                           duration: const Duration(seconds: 2),
                           backgroundColor: Colors.orange,
                         ),
                       );
                     },
                   );
-                }).toList(),
+                }), //.toList()//
 
                 const SizedBox(height: 20),
 
                 // 🆕 Precio mejorado (editable)
-                const Text('Precio x día', style: TextStyle(color: _kBlackText, fontWeight: FontWeight.w600)),
+                const Text(
+                  'Precio x día',
+                  style: TextStyle(
+                    color: _kBlackText,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
                 const SizedBox(height: 5),
                 _buildPriceInput(),
 
                 const SizedBox(height: 20),
 
                 // 🆕 Sección de Imagen
-                const Text('Imagen de la Habitación', style: TextStyle(color: _kBlackText, fontWeight: FontWeight.w600)),
+                const Text(
+                  'Imagen de la Habitación',
+                  style: TextStyle(
+                    color: _kBlackText,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
                 const SizedBox(height: 8),
                 _buildImageSelector(),
 
@@ -331,12 +386,18 @@ class _RoomCreationScreenState extends State<RoomCreationScreen> {
                             width: 20,
                             child: CircularProgressIndicator(
                               strokeWidth: 2,
-                              valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                              valueColor: AlwaysStoppedAnimation<Color>(
+                                Colors.white,
+                              ),
                             ),
                           )
                         : const Text(
                             'Crear Habitación',
-                            style: TextStyle(fontSize: 18, color: _kCardColor, fontWeight: FontWeight.bold),
+                            style: TextStyle(
+                              fontSize: 18,
+                              color: _kCardColor,
+                              fontWeight: FontWeight.bold,
+                            ),
                           ),
                   ),
                 ),
@@ -347,7 +408,8 @@ class _RoomCreationScreenState extends State<RoomCreationScreen> {
       ),
     );
   }
- // 🆕 Widget de precio editable
+
+  // 🆕 Widget de precio editable
   Widget _buildPriceInput() {
     return Row(
       children: [
@@ -359,7 +421,10 @@ class _RoomCreationScreenState extends State<RoomCreationScreen> {
             keyboardType: const TextInputType.numberWithOptions(decimal: true),
             decoration: InputDecoration(
               prefixText: 'USD ',
-              contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+              contentPadding: const EdgeInsets.symmetric(
+                horizontal: 12,
+                vertical: 10,
+              ),
               border: const OutlineInputBorder(),
               focusedBorder: OutlineInputBorder(
                 borderSide: BorderSide(color: _kPrimaryColor, width: 2.0),
@@ -393,6 +458,7 @@ class _RoomCreationScreenState extends State<RoomCreationScreen> {
       ),
     );
   }
+
   // 🆕 Widget para seleccionar imagen con preview
   Widget _buildImageSelector() {
     return Container(
@@ -426,20 +492,18 @@ class _RoomCreationScreenState extends State<RoomCreationScreen> {
                 color: Colors.grey.shade200,
                 borderRadius: BorderRadius.circular(8),
               ),
-              child: Icon(
-                Icons.image,
-                size: 80,
-                color: Colors.grey.shade400,
-              ),
+              child: Icon(Icons.image, size: 80, color: Colors.grey.shade400),
             ),
-          
+
           // Botón para seleccionar
           SizedBox(
             width: double.infinity,
             child: ElevatedButton.icon(
               onPressed: _seleccionarImagen,
               icon: const Icon(Icons.upload_file),
-              label: Text(_imagenFile != null ? 'Cambiar imagen' : 'Seleccionar imagen'),
+              label: Text(
+                _imagenFile != null ? 'Cambiar imagen' : 'Seleccionar imagen',
+              ),
               style: ElevatedButton.styleFrom(
                 backgroundColor: _kPrimaryColor,
                 foregroundColor: Colors.white,
@@ -462,7 +526,10 @@ class _RoomCreationScreenState extends State<RoomCreationScreen> {
         controller: controller,
         decoration: InputDecoration(
           hintText: hintText,
-          contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
+          contentPadding: const EdgeInsets.symmetric(
+            horizontal: 10,
+            vertical: 10,
+          ),
           border: const OutlineInputBorder(
             borderSide: BorderSide(color: Colors.grey),
           ),
@@ -484,7 +551,10 @@ class _RoomCreationScreenState extends State<RoomCreationScreen> {
         maxLines: 4,
         decoration: InputDecoration(
           hintText: 'Ingrese una descripción detallada de la habitación',
-          contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
+          contentPadding: const EdgeInsets.symmetric(
+            horizontal: 10,
+            vertical: 10,
+          ),
           border: const OutlineInputBorder(
             borderSide: BorderSide(color: Colors.grey),
           ),
@@ -508,7 +578,10 @@ class _RoomCreationScreenState extends State<RoomCreationScreen> {
               controller: _servicioAdicionalController,
               decoration: InputDecoration(
                 hintText: 'Ej: Desayuno Buffet',
-                contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
+                contentPadding: const EdgeInsets.symmetric(
+                  horizontal: 10,
+                  vertical: 10,
+                ),
                 border: const OutlineInputBorder(
                   borderSide: BorderSide(color: Colors.grey),
                 ),
@@ -538,7 +611,12 @@ class _RoomCreationScreenState extends State<RoomCreationScreen> {
     );
   }
 
-  Widget _buildCheckboxRow(String title, bool value, ValueChanged<bool?> onChanged, {bool useBorderedCheckbox = false}) {
+  Widget _buildCheckboxRow(
+    String title,
+    bool value,
+    ValueChanged<bool?> onChanged, {
+    bool useBorderedCheckbox = false,
+  }) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 4.0),
       child: Row(
@@ -548,7 +626,11 @@ class _RoomCreationScreenState extends State<RoomCreationScreen> {
           Checkbox(
             value: value,
             onChanged: onChanged,
-            shape: useBorderedCheckbox ? const CircleBorder() : RoundedRectangleBorder(borderRadius: BorderRadius.circular(4)),
+            shape: useBorderedCheckbox
+                ? const CircleBorder()
+                : RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(4),
+                  ),
             activeColor: _kDarkButton,
             checkColor: _kCardColor,
             side: const BorderSide(color: _kDarkButton, width: 1.5),
@@ -579,7 +661,11 @@ class _RoomCreationScreenState extends State<RoomCreationScreen> {
           Row(
             children: [
               IconButton(
-                icon: const Icon(Icons.delete_outline, color: Colors.red, size: 22),
+                icon: const Icon(
+                  Icons.delete_outline,
+                  color: Colors.red,
+                  size: 22,
+                ),
                 onPressed: onDelete,
                 padding: EdgeInsets.zero,
                 constraints: const BoxConstraints(minWidth: 30, minHeight: 30),
@@ -590,7 +676,9 @@ class _RoomCreationScreenState extends State<RoomCreationScreen> {
                 activeColor: _kDarkButton,
                 checkColor: _kCardColor,
                 side: const BorderSide(color: _kDarkButton, width: 1.5),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(4)),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(4),
+                ),
               ),
             ],
           ),
@@ -613,11 +701,11 @@ class _RoomCreationScreenState extends State<RoomCreationScreen> {
 
     // Recopilar servicios seleccionados
     List<String> serviciosSeleccionados = [];
-    
+
     if (_servicioAlCuarto) serviciosSeleccionados.add('Servicio al cuarto');
     if (_jacuzzi) serviciosSeleccionados.add('Jacuzzi');
     if (_minibar) serviciosSeleccionados.add('Minibar');
-    
+
     for (var servicio in _serviciosAdicionales) {
       if (servicio['seleccionado']) {
         serviciosSeleccionados.add(servicio['nombre']);
@@ -625,50 +713,50 @@ class _RoomCreationScreenState extends State<RoomCreationScreen> {
     }
 
     // Mostrar loading
-  setState(() {
-    _isLoadingCreation = true;
-  });
+    setState(() {
+      _isLoadingCreation = true;
+    });
 
-  try {
-    // ✅ LLAMAR A FIREBASE SERVICE EN LUGAR DE API SERVICE
-    await _firebaseService.crearHabitacion(
-      nombre: _nombreController.text.trim(),
-      descripcion: _descripcionController.text.trim(),
-      precio: _precio,
-      servicios: serviciosSeleccionados,
-      imagenBase64: _imagenBase64, // ← FirebaseService manejará Cloudinary
-    );
-
-    // Éxito
-    if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Row(
-            children: [
-              Icon(Icons.check_circle, color: Colors.white),
-              SizedBox(width: 8),
-              Text('¡Habitación creada exitosamente!'),
-            ],
-          ),
-          backgroundColor: Colors.green,
-          duration: Duration(seconds: 2),
-        ),
+    try {
+      // ✅ LLAMAR A FIREBASE SERVICE EN LUGAR DE API SERVICE
+      await _firebaseService.crearHabitacion(
+        nombre: _nombreController.text.trim(),
+        descripcion: _descripcionController.text.trim(),
+        precio: _precio,
+        servicios: serviciosSeleccionados,
+        imagenBase64: _imagenBase64, // ← FirebaseService manejará Cloudinary
       );
 
-      Navigator.pop(context);
-    }
-  } catch (e) {
-    if (mounted) {
-      _mostrarError(e.toString().replaceAll('Exception: ', ''));
-    }
-  } finally {
-    if (mounted) {
-      setState(() {
-        _isLoadingCreation = false;
-      });
+      // Éxito
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Row(
+              children: [
+                Icon(Icons.check_circle, color: Colors.white),
+                SizedBox(width: 8),
+                Text('¡Habitación creada exitosamente!'),
+              ],
+            ),
+            backgroundColor: Colors.green,
+            duration: Duration(seconds: 2),
+          ),
+        );
+
+        Navigator.pop(context);
+      }
+    } catch (e) {
+      if (mounted) {
+        _mostrarError(e.toString().replaceAll('Exception: ', ''));
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isLoadingCreation = false;
+        });
+      }
     }
   }
-}
 
   void _mostrarError(String mensaje) {
     ScaffoldMessenger.of(context).showSnackBar(
@@ -711,7 +799,10 @@ class _PriceInput extends StatelessWidget {
           ),
           child: Text(
             'USD ${precio.toStringAsFixed(2)}',
-            style: const TextStyle(color: _kCardColor, fontWeight: FontWeight.bold),
+            style: const TextStyle(
+              color: _kCardColor,
+              fontWeight: FontWeight.bold,
+            ),
           ),
         ),
         const SizedBox(width: 5),
@@ -720,7 +811,7 @@ class _PriceInput extends StatelessWidget {
             _buildArrowButton(Icons.arrow_drop_up, onIncrement),
             _buildArrowButton(Icons.arrow_drop_down, onDecrement),
           ],
-        )
+        ),
       ],
     );
   }

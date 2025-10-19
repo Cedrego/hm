@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 import '../core/app_export.dart';
 
 /// CustomEditText - A reusable text input field component with consistent styling
-/// 
+///
 /// Features:
 /// - Customizable placeholder text
 /// - Multiple keyboard input types (email, text, phone, etc.)
@@ -11,7 +11,7 @@ import '../core/app_export.dart';
 /// - Consistent border and background styling
 /// - Responsive design using SizeUtils
 /// - Configurable margins and focus handling
-/// 
+///
 /// @param controller - TextEditingController for managing text input
 /// @param hintText - Placeholder text shown when field is empty
 /// @param keyboardType - Type of keyboard to display (email, text, phone, etc.)
@@ -80,12 +80,14 @@ class CustomEditText extends StatelessWidget {
         validator: validator,
         onChanged: onChanged,
         onTap: onTap,
-        style: TextStyleHelper.instance.title16RegularInter
-            .copyWith(color: appTheme.colorFF0000),
+        style: TextStyleHelper.instance.title16RegularInter.copyWith(
+          color: appTheme.colorFF0000,
+        ),
         decoration: InputDecoration(
           hintText: hintText ?? '',
-          hintStyle: TextStyleHelper.instance.title16RegularInter
-              .copyWith(color: appTheme.gray400),
+          hintStyle: TextStyleHelper.instance.title16RegularInter.copyWith(
+            color: appTheme.gray400,
+          ),
           contentPadding: EdgeInsets.only(
             top: 10.h,
             right: 16.h,
@@ -96,38 +98,23 @@ class CustomEditText extends StatelessWidget {
           fillColor: appTheme.whiteA700,
           border: OutlineInputBorder(
             borderRadius: BorderRadius.circular(8.h),
-            borderSide: BorderSide(
-              color: appTheme.blueGray100,
-              width: 1.h,
-            ),
+            borderSide: BorderSide(color: appTheme.blueGray100, width: 1.h),
           ),
           enabledBorder: OutlineInputBorder(
             borderRadius: BorderRadius.circular(8.h),
-            borderSide: BorderSide(
-              color: appTheme.blueGray100,
-              width: 1.h,
-            ),
+            borderSide: BorderSide(color: appTheme.blueGray100, width: 1.h),
           ),
           focusedBorder: OutlineInputBorder(
             borderRadius: BorderRadius.circular(8.h),
-            borderSide: BorderSide(
-              color: appTheme.blueGray100,
-              width: 1.h,
-            ),
+            borderSide: BorderSide(color: appTheme.blueGray100, width: 1.h),
           ),
           errorBorder: OutlineInputBorder(
             borderRadius: BorderRadius.circular(8.h),
-            borderSide: BorderSide(
-              color: appTheme.redCustom,
-              width: 1.h,
-            ),
+            borderSide: BorderSide(color: appTheme.redCustom, width: 1.h),
           ),
           focusedErrorBorder: OutlineInputBorder(
             borderRadius: BorderRadius.circular(8.h),
-            borderSide: BorderSide(
-              color: appTheme.redCustom,
-              width: 1.h,
-            ),
+            borderSide: BorderSide(color: appTheme.redCustom, width: 1.h),
           ),
         ),
       ),

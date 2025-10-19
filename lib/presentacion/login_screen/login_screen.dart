@@ -17,8 +17,7 @@ class _LoginScreenState extends State<LoginScreen> {
   final TextEditingController emailController = TextEditingController();
   final TextEditingController passwordController = TextEditingController();
   final GlobalKey<FormState> _formKey = GlobalKey<FormState>();
-  final FirebaseService _firebaseService =
-      FirebaseService();
+  final FirebaseService _firebaseService = FirebaseService();
   bool _isLoading = false;
 
   @override
@@ -231,30 +230,35 @@ class _LoginScreenState extends State<LoginScreen> {
 
         // Mostrar mensaje de éxito
         if (mounted) {
+          // ignore: use_build_context_synchronously
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
               content: Text('¡Bienvenido ${userData['nombre']}!'),
               backgroundColor: Colors.green,
-              duration: Duration(seconds: 2),
+              duration: const Duration(seconds: 2),
             ),
           );
 
           // Navegar a la página principal
-          Navigator.pushNamedAndRemoveUntil(
-            context,
-            AppRoutes.mainPage,
-            (route) => false,
-          );
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            // ignore: use_build_context_synchronously
+            Navigator.pushNamedAndRemoveUntil(
+              context,
+              AppRoutes.mainPage,
+              (route) => false,
+            );
+          });
         }
       }
     } catch (e) {
       // Mostrar error
       if (mounted) {
+        // ignore: use_build_context_synchronously
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(e.toString().replaceAll('Exception: ', '')),
             backgroundColor: Colors.red,
-            duration: Duration(seconds: 3),
+            duration: const Duration(seconds: 3),
           ),
         );
       }

@@ -3,7 +3,7 @@ import 'dart:io';
 import 'package:image_picker/image_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-
+import 'package:hm/core/logger.dart';
 import '../../core/app_export.dart';
 import '../../widgets/register_form_container.dart';
 import '../../core/firebase_service.dart';
@@ -47,7 +47,7 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
 
   Future<void> _seleccionarImagen() async {
     try {
-      print('📷 Seleccionando imagen...');
+      AppLogger.i('📷 Seleccionando imagen...');
 
       final pickedFile = await _picker.pickImage(
         source: ImageSource.gallery,
@@ -63,12 +63,12 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
           _imagenBase64 = base64Encode(bytes);
         });
 
-        print('✅ Imagen seleccionada: ${bytes.length} bytes');
+        AppLogger.d('✅ Imagen seleccionada: ${bytes.length} bytes');
       } else {
-        print('⚠️ No se seleccionó ninguna imagen');
+        AppLogger.i('⚠️ No se seleccionó ninguna imagen');
       }
     } catch (e) {
-      print('❌ Error al seleccionar imagen: $e');
+      AppLogger.e('❌ Error al seleccionar imagen: $e');
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -328,25 +328,24 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
   }
 
   Future<void> _onRegistroPressed(BuildContext context) async {
-    print('🔵 BOTÓN DE REGISTRO PRESIONADO');
+    AppLogger.i('🔵 BOTÓN DE REGISTRO PRESIONADO');
 
     // Validar el formulario
     if (!(formKey.currentState?.validate() ?? false)) {
-      print('❌ Validación del formulario falló');
+      AppLogger.e('❌ Validación del formulario falló');
       return;
     }
 
-    print('✅ Validación del formulario exitosa');
+    AppLogger.i('✅ Validación del formulario exitosa');
 
     // Mostrar indicador de carga
     setState(() {
       _isLoading = true;
     });
 
-    print('⏳ Indicador de carga activado');
+    AppLogger.i('⏳ Indicador de carga activado');
 
     try {
-      // Preparar datos para enviar, incluye la imagen base64 si existe
       final datos = {
         'email': emailController.text.trim(),
         'nombre': nameController.text.trim(),
@@ -357,81 +356,78 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
         'rol': 'huesped',
       };
 
-      print('📦 Datos preparados para enviar:');
-      print('   Email: ${datos['email']}');
-      print('   Nombre: ${datos['nombre']}');
-      print('   Tiene imagen: ${_imagenBase64 != null ? "SÍ" : "NO"}');
+      AppLogger.i('📦 Datos preparados para enviar:');
+      AppLogger.d('   Email: ${datos['email']}');
+      AppLogger.d('   Nombre: ${datos['nombre']}');
+      AppLogger.d('   Tiene imagen: ${_imagenBase64 != null ? "SÍ" : "NO"}');
 
-      // ✅ LLAMAR A FIREBASE SERVICE EN LUGAR DE API SERVICE
-      print('🔥 Llamando a FirebaseService.registro()...');
+      AppLogger.i('🔥 Llamando a FirebaseService.registro()...');
       final response = await _firebaseService.registro(datos);
 
-      print('📥 Respuesta recibida: $response');
+      AppLogger.i('📥 Respuesta recibida: $response');
 
-      // Verificar que el registro fue exitoso
       if (response['success'] == true) {
-        print('✅ Registro exitoso!');
+        AppLogger.success('✅ Registro exitoso!');
 
-        // ✅ GUARDAR SESIÓN AUTOMÁTICAMENTE (LOGIN DESPUÉS DE REGISTRO)
         if (response['usuario'] != null) {
           await AuthService.saveUserSession(response['usuario']);
-          print('✅ Sesión guardada automáticamente');
+          AppLogger.success('✅ Sesión guardada automáticamente');
         }
 
-        // Limpiar formulario
         _clearForm();
 
-        // Mostrar mensaje de éxito
         if (mounted) {
+          // ignore: use_build_context_synchronously
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
               content: Text(
                 response['message'] ?? 'Usuario registrado exitosamente',
               ),
               backgroundColor: Colors.green,
-              duration: Duration(seconds: 2),
+              duration: const Duration(seconds: 2),
             ),
           );
 
-          print('✅ SnackBar de éxito mostrado');
+          AppLogger.i('✅ SnackBar de éxito mostrado');
 
-          // ✅ NAVEGAR DIRECTAMENTE AL HOME (YA ESTÁ LOGUEADO)
-          await Future.delayed(Duration(seconds: 1));
+          await Future.delayed(const Duration(seconds: 1));
           if (mounted) {
-            print('🏠 Navegando a MainPage (ya logueado)');
-            Navigator.pushNamedAndRemoveUntil(
-              context,
-              AppRoutes.mainPage,
-              (route) => false,
-            );
+            AppLogger.i('🏠 Navegando a MainPage (ya logueado)');
+            WidgetsBinding.instance.addPostFrameCallback((_) {
+              // ignore: use_build_context_synchronously
+              Navigator.pushNamedAndRemoveUntil(
+                context,
+                AppRoutes.mainPage,
+                (route) => false,
+              );
+            });
           }
         }
       } else {
-        print('⚠️ Registro falló: ${response['message']}');
+        AppLogger.e('⚠️ Registro falló: ${response['message']}');
         throw Exception(response['message'] ?? 'Error desconocido');
       }
     } catch (e) {
-      print('❌ ERROR EN REGISTRO: $e');
+      AppLogger.e('❌ ERROR EN REGISTRO: $e');
 
-      // Mostrar error
       if (mounted) {
+        // ignore: use_build_context_synchronously
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(e.toString().replaceAll('Exception: ', '')),
             backgroundColor: Colors.red,
-            duration: Duration(seconds: 3),
+            duration: const Duration(seconds: 3),
           ),
         );
 
-        print('❌ SnackBar de error mostrado');
+        AppLogger.i('❌ SnackBar de error mostrado');
       }
     } finally {
-      // Ocultar indicador de carga
       if (mounted) {
         setState(() {
           _isLoading = false;
         });
-        print('⏳ Indicador de carga desactivado');
+        AppLogger.i('⏳ Indicador de carga desactivado');
       }
     }
   }
@@ -450,6 +446,6 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
       _imagenBase64 = null;
     });
 
-    print('🧹 Formulario limpiado');
+    AppLogger.i('🧹 Formulario limpiado');
   }
 }

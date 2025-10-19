@@ -93,64 +93,65 @@ class _ReservationFormScreenState extends State<ReservationFormScreen> {
   }
 
   Future<void> _confirmReservation() async {
-    if (checkInDate == null || checkOutDate == null) {
-      setState(() {
-        _errorMessage = 'Debe seleccionar ambas fechas (Check-in y Check-out).';
-      });
-      return;
-    }
-    
-    if (_userData == null || _userData!['id'] == null) {
-       setState(() {
-        _errorMessage = 'Error: No se pudo obtener el ID de usuario para la reserva.';
-      });
-      return;
-    }
-
+  if (checkInDate == null || checkOutDate == null) {
     setState(() {
-      isLoading = true;
-      _errorMessage = null;
+      _errorMessage = 'Debe seleccionar ambas fechas (Check-in y Check-out).';
     });
+    return;
+  }
+  
+  if (_userData == null || _userData!['id'] == null) {
+    setState(() {
+      _errorMessage = 'Error: No se pudo obtener el ID de usuario para la reserva.';
+    });
+    return;
+  }
 
-    try {
-      final idUsuario = _userData!['id'];
+  setState(() {
+    isLoading = true;
+    _errorMessage = null;
+  });
 
-      await _firebaseService.crearReserva(
-        idUsuario: idUsuario,
-        idHabitacion: _roomId,
-        fechaCheckIn: checkInDate!.toIso8601String().substring(0, 10),
-        fechaCheckOut: checkOutDate!.toIso8601String().substring(0, 10),
-      );
+  try {
+    final idUsuario = _userData!['id'];
 
-      if (!mounted) return;
-      
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('✅ Reserva creada exitosamente!'),
-          backgroundColor: Color(0xFF00897B),
-          duration: Duration(seconds: 3),
-        ),
-      );
-      
-      Navigator.popUntil(context, ModalRoute.withName(AppRoutes.roomListScreen));
-      Navigator.pushNamed(
-        context, 
-        AppRoutes.reservationListScreen, 
-        arguments: widget.room
-      );
+    await _firebaseService.crearReserva(
+      idUsuario: idUsuario,
+      idHabitacion: _roomId,
+      fechaCheckIn: checkInDate!.toIso8601String().substring(0, 10),
+      fechaCheckOut: checkOutDate!.toIso8601String().substring(0, 10),
+    );
 
-    } catch (e) {
-      if (!mounted) return;
-      setState(() {
-        _errorMessage = e.toString().replaceFirst('Exception: ', '');
-      });
-    } finally {
-      if (!mounted) return;
+    if (!mounted) return;
+    
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('✅ Reserva creada exitosamente!'),
+        backgroundColor: Color(0xFF00897B),
+        duration: Duration(seconds: 3),
+      ),
+    );
+    
+    Navigator.popUntil(context, ModalRoute.withName(AppRoutes.roomListScreen));
+    Navigator.pushNamed(
+      context, 
+      AppRoutes.reservationListScreen, 
+      arguments: widget.room
+    );
+
+  } catch (e) {
+    if (!mounted) return;
+    setState(() {
+      _errorMessage = e.toString().replaceFirst('Exception: ', '');
+    });
+  } finally {
+    if (mounted) {
       setState(() {
         isLoading = false;
       });
     }
   }
+}
 
   Widget _buildDateSelector({
     required String label,
@@ -316,7 +317,7 @@ class _ReservationFormScreenState extends State<ReservationFormScreen> {
           
           if (isLoading)
             Container(
-              color: Colors.black.withOpacity(0.5),
+              color: Colors.black.withAlpha(128),
               child: const Center(
                 child: Card(
                   child: Padding(

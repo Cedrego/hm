@@ -1,4 +1,5 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:hm/core/logger.dart';
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 
@@ -59,11 +60,11 @@ class FirebaseService {
       // ✅ SUBIR IMAGEN A CLOUDINARY SI EXISTE
       if (datos['imagen'] != null && datos['imagen'].toString().isNotEmpty) {
         try {
-          print('📤 Subiendo imagen a Cloudinary...');
+          AppLogger.i('📤 Subiendo imagen a Cloudinary...');
           imagenUrl = await _subirImagenACloudinary(datos['imagen']!);
-          print('✅ Imagen subida exitosamente: $imagenUrl');
+          AppLogger.i('✅ Imagen subida exitosamente: $imagenUrl');
         } catch (e) {
-          print('⚠️ Error subiendo imagen, continuando sin imagen: $e');
+          AppLogger.e('⚠️ Error subiendo imagen, continuando sin imagen: $e');
           // Continuar sin imagen - no bloquear el registro
         }
       }
@@ -77,7 +78,7 @@ class FirebaseService {
         userData['imagenUrl'] = imagenUrl;
       }
 
-      print('💾 Guardando usuario en Firestore...');
+      AppLogger.i('💾 Guardando usuario en Firestore...');
       final docRef = await _firestore.collection('usuarios').add(userData);
 
       // Preparar respuesta sin password
@@ -90,7 +91,7 @@ class FirebaseService {
         'usuario': {'id': docRef.id, ...responseData},
       };
     } catch (e) {
-      print('❌ Error en registro: $e');
+      AppLogger.e('❌ Error en registro: $e');
       throw Exception('Error en registro: $e');
     }
   }
@@ -298,7 +299,7 @@ class FirebaseService {
         return {'id': doc.id, ...data};
       }).toList();
     } catch (e) {
-      print('Error obteniendo reservas: $e');
+      AppLogger.e('Error obteniendo reservas: $e');
       return [];
     }
   }
@@ -313,7 +314,7 @@ class FirebaseService {
     String folder = 'usuarios',
   }) async {
     try {
-      print('📤 Subiendo imagen a Cloudinary...');
+      AppLogger.i('📤 Subiendo imagen a Cloudinary...');
 
       const cloudName = 'dexpqwsqp';
       const uploadPreset = 'hostel_mochileros';
@@ -342,14 +343,14 @@ class FirebaseService {
           ),
         );
 
-      print('🌐 Enviando solicitud a Cloudinary - Carpeta: $subcarpeta');
+      AppLogger.i('🌐 Enviando solicitud a Cloudinary - Carpeta: $subcarpeta');
       final response = await request.send();
       final responseData = await response.stream.bytesToString();
       final jsonResponse = jsonDecode(responseData);
 
       if (response.statusCode == 200) {
         final imageUrl = jsonResponse['secure_url'];
-        print(
+        AppLogger.success(
           '✅ Imagen subida exitosamente a carpeta "$subcarpeta": $imageUrl',
         );
         return imageUrl;
@@ -359,7 +360,7 @@ class FirebaseService {
         );
       }
     } catch (e) {
-      print('❌ Error subiendo imagen a Cloudinary: $e');
+      AppLogger.e('❌ Error subiendo imagen a Cloudinary: $e');
       throw Exception('Error al subir imagen: $e');
     }
   }
@@ -371,9 +372,9 @@ class FirebaseService {
         'mensaje': 'Conexión exitosa desde Hostel Mochileros',
         'timestamp': FieldValue.serverTimestamp(),
       });
-      print('✅ CONEXIÓN EXITOSA con Firebase');
+      AppLogger.success('✅ CONEXIÓN EXITOSA con Firebase');
     } catch (e) {
-      print('❌ ERROR de conexión: $e');
+      AppLogger.e('❌ ERROR de conexión: $e');
     }
   }
 
@@ -389,7 +390,7 @@ class FirebaseService {
       }
       return null;
     } catch (e) {
-      print('Error obteniendo habitación $habitacionId: $e');
+      AppLogger.e('Error obteniendo habitación $habitacionId: $e');
       throw Exception('Error al cargar datos de la habitación');
     }
   }

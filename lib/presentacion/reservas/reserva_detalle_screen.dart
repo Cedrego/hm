@@ -125,7 +125,7 @@ class _ReservaDetalleScreenState extends State<ReservaDetalleScreen> {
               Container(
                 padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
-                  color: Colors.black.withOpacity(0.05),
+                  color: Colors.black.withAlpha(13),
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: Text.rich(
@@ -276,7 +276,7 @@ class _ReservaDetalleScreenState extends State<ReservaDetalleScreen> {
                             topLeft: Radius.circular(16),
                             topRight: Radius.circular(16),
                           ),
-                          child: Container(
+                          child: SizedBox(
                             height: 200,
                             width: double.infinity,
                             child: imagenUrl.isNotEmpty
@@ -545,9 +545,9 @@ class _ReservaDetalleScreenState extends State<ReservaDetalleScreen> {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
       decoration: BoxDecoration(
-        color: color.withOpacity(0.1),
+        color: color.withAlpha(26),
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: color.withOpacity(0.3)),
+        border: Border.all(color: color.withAlpha(76)),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,

@@ -7,12 +7,12 @@ class CustomAppBar extends StatelessWidget implements PreferredSizeWidget {
   final bool isAdmin;
 
   const CustomAppBar({
-    Key? key,
+    super.key,
     required this.scaffoldKey,
     required this.onLogoutPressed,
     required this.userData,
     required this.isAdmin,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {

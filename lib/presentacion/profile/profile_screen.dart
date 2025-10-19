@@ -70,11 +70,15 @@ class ProfileScreen extends StatelessWidget {
 
     if (confirmed == true) {
       await AuthService.logout();
-      Navigator.pushNamedAndRemoveUntil(
-        context,
-        AppRoutes.loginScreen,
-        (route) => false,
-      );
+
+      // Para StatelessWidget, usamos esto:
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        Navigator.pushNamedAndRemoveUntil(
+          context,
+          AppRoutes.loginScreen,
+          (route) => false,
+        );
+      });
     }
   }
 
@@ -163,7 +167,7 @@ class ProfileScreen extends StatelessWidget {
         Container(
           padding: const EdgeInsets.all(8),
           decoration: BoxDecoration(
-            color: Color(0xFF00897B).withOpacity(0.1),
+            color: Color(0xFF00897B).withAlpha(26),
             shape: BoxShape.circle,
           ),
           child: Icon(icon, size: 20, color: Color(0xFF00897B)),

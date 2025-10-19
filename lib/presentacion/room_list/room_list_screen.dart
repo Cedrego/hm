@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import '../../core/firebase_service.dart';
-import '../../core/auth_service.dart'; 
-import '../custom_app_bar.dart'; 
-import '../app_drawer.dart'; 
+import '../../core/auth_service.dart';
+import '../custom_app_bar.dart';
+import '../app_drawer.dart';
 import '../../core/app_export.dart';
 
 class RoomListScreen extends StatefulWidget {
@@ -16,7 +16,7 @@ class RoomListScreen extends StatefulWidget {
 class _RoomListScreenState extends State<RoomListScreen> {
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
   final FirebaseService _firebaseService = FirebaseService();
-  
+
   bool _isLoadingUserData = true;
   Map<String, dynamic>? _userData;
   bool get _isAdmin => _userData?['rol'] == 'admin';
@@ -31,7 +31,7 @@ class _RoomListScreenState extends State<RoomListScreen> {
     _loadUserData();
     _cargarHabitaciones();
   }
-  
+
   Future<void> _loadUserData() async {
     try {
       final userData = await AuthService.getUserData();
@@ -56,21 +56,24 @@ class _RoomListScreenState extends State<RoomListScreen> {
 
     try {
       // Escuchar el stream de habitaciones
-      _firebaseService.getHabitaciones().listen((listaHabitaciones) {
-        if (mounted) {
-          setState(() {
-            habitaciones = listaHabitaciones;
-            isLoading = false;
-          });
-        }
-      }, onError: (error) {
-        if (mounted) {
-          setState(() {
-            errorMessage = 'Error al cargar habitaciones: $error';
-            isLoading = false;
-          });
-        }
-      });
+      _firebaseService.getHabitaciones().listen(
+        (listaHabitaciones) {
+          if (mounted) {
+            setState(() {
+              habitaciones = listaHabitaciones;
+              isLoading = false;
+            });
+          }
+        },
+        onError: (error) {
+          if (mounted) {
+            setState(() {
+              errorMessage = 'Error al cargar habitaciones: $error';
+              isLoading = false;
+            });
+          }
+        },
+      );
     } catch (e) {
       if (mounted) {
         setState(() {
@@ -80,7 +83,7 @@ class _RoomListScreenState extends State<RoomListScreen> {
       }
     }
   }
-  
+
   Future<void> _onLogoutPressed() async {
     final confirmed = await showDialog<bool>(
       context: context,
@@ -101,13 +104,18 @@ class _RoomListScreenState extends State<RoomListScreen> {
       ),
     );
 
-    if (confirmed == true && mounted) {
+    if (confirmed == true) {
       await AuthService.logout();
-      Navigator.pushNamedAndRemoveUntil(
-        context,
-        AppRoutes.loginScreen,
-        (route) => false,
-      );
+
+      if (!mounted) return;
+
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        Navigator.pushNamedAndRemoveUntil(
+          context,
+          AppRoutes.loginScreen,
+          (route) => false,
+        );
+      });
     }
   }
 
@@ -116,24 +124,24 @@ class _RoomListScreenState extends State<RoomListScreen> {
     if (_isLoadingUserData) {
       return const Scaffold(body: Center(child: CircularProgressIndicator()));
     }
-    
+
     return Scaffold(
       key: _scaffoldKey,
       backgroundColor: Colors.grey[100],
-      
+
       appBar: CustomAppBar(
         scaffoldKey: _scaffoldKey,
         onLogoutPressed: _onLogoutPressed,
         userData: _userData,
         isAdmin: _isAdmin,
       ),
-      
+
       drawer: AppDrawer(
         userData: _userData,
         isAdmin: _isAdmin,
         onLogoutPressed: _onLogoutPressed,
       ),
-      
+
       body: RefreshIndicator(
         onRefresh: _cargarHabitaciones,
         color: const Color(0xFF00897B),
@@ -142,70 +150,85 @@ class _RoomListScreenState extends State<RoomListScreen> {
                 child: CircularProgressIndicator(color: Color(0xFF00897B)),
               )
             : errorMessage.isNotEmpty
-                ? Center(
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        const Icon(Icons.error_outline, size: 64, color: Colors.red),
-                        const SizedBox(height: 16),
-                        Text(
-                          'Error al cargar habitaciones',
-                          style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.grey[700]),
-                        ),
-                        const SizedBox(height: 8),
-                        Padding(
-                          padding: const EdgeInsets.symmetric(horizontal: 32),
-                          child: Text(
-                            errorMessage,
-                            textAlign: TextAlign.center,
-                            style: TextStyle(fontSize: 14, color: Colors.grey[600]),
-                          ),
-                        ),
-                        const SizedBox(height: 24),
-                        ElevatedButton.icon(
-                          onPressed: _cargarHabitaciones,
-                          icon: const Icon(Icons.refresh),
-                          label: const Text('Reintentar'),
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: const Color(0xFF00897B),
-                            foregroundColor: Colors.white,
-                            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-                          ),
-                        ),
-                      ],
+            ? Center(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    const Icon(
+                      Icons.error_outline,
+                      size: 64,
+                      color: Colors.red,
                     ),
-                  )
-                : habitaciones.isEmpty
-                    ? Center(
-                        child: Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Icon(Icons.hotel_outlined, size: 80, color: Colors.grey[400]),
-                            const SizedBox(height: 16),
-                            Text(
-                              'No hay habitaciones disponibles',
-                              style: TextStyle(fontSize: 18, color: Colors.grey[600]),
-                            ),
-                            const SizedBox(height: 24),
-                            ElevatedButton.icon(
-                              onPressed: _cargarHabitaciones,
-                              icon: const Icon(Icons.refresh),
-                              label: const Text('Actualizar'),
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: const Color(0xFF00897B),
-                                foregroundColor: Colors.white,
-                              ),
-                            ),
-                          ],
-                        ),
-                      )
-                    : ListView.builder(
-                        padding: const EdgeInsets.symmetric(vertical: 8),
-                        itemCount: habitaciones.length,
-                        itemBuilder: (context, index) {
-                          return _buildRoomListItem(habitaciones[index]);
-                        },
+                    const SizedBox(height: 16),
+                    Text(
+                      'Error al cargar habitaciones',
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.grey[700],
                       ),
+                    ),
+                    const SizedBox(height: 8),
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 32),
+                      child: Text(
+                        errorMessage,
+                        textAlign: TextAlign.center,
+                        style: TextStyle(fontSize: 14, color: Colors.grey[600]),
+                      ),
+                    ),
+                    const SizedBox(height: 24),
+                    ElevatedButton.icon(
+                      onPressed: _cargarHabitaciones,
+                      icon: const Icon(Icons.refresh),
+                      label: const Text('Reintentar'),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFF00897B),
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 24,
+                          vertical: 12,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              )
+            : habitaciones.isEmpty
+            ? Center(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(
+                      Icons.hotel_outlined,
+                      size: 80,
+                      color: Colors.grey[400],
+                    ),
+                    const SizedBox(height: 16),
+                    Text(
+                      'No hay habitaciones disponibles',
+                      style: TextStyle(fontSize: 18, color: Colors.grey[600]),
+                    ),
+                    const SizedBox(height: 24),
+                    ElevatedButton.icon(
+                      onPressed: _cargarHabitaciones,
+                      icon: const Icon(Icons.refresh),
+                      label: const Text('Actualizar'),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFF00897B),
+                        foregroundColor: Colors.white,
+                      ),
+                    ),
+                  ],
+                ),
+              )
+            : ListView.builder(
+                padding: const EdgeInsets.symmetric(vertical: 8),
+                itemCount: habitaciones.length,
+                itemBuilder: (context, index) {
+                  return _buildRoomListItem(habitaciones[index]);
+                },
+              ),
       ),
       floatingActionButton: FloatingActionButton(
         onPressed: _cargarHabitaciones,
@@ -222,7 +245,9 @@ class _RoomListScreenState extends State<RoomListScreen> {
     final String? imagenUrl = room['imagenUrl'];
     final bool disponible = room['disponible'] ?? true;
 
-    final List<String> serviciosAdicionales = List<String>.from(room['servicios'] ?? []);
+    final List<String> serviciosAdicionales = List<String>.from(
+      room['servicios'] ?? [],
+    );
 
     return GestureDetector(
       onTap: () => _mostrarDetalleHabitacion(room),
@@ -258,10 +283,10 @@ class _RoomListScreenState extends State<RoomListScreen> {
                       Expanded(
                         child: Text(
                           nombre,
-                          maxLines: 2, 
+                          maxLines: 2,
                           overflow: TextOverflow.ellipsis,
                           style: TextStyle(
-                            fontWeight: FontWeight.bold, 
+                            fontWeight: FontWeight.bold,
                             fontSize: 16,
                             color: disponible ? Colors.black : Colors.grey,
                           ),
@@ -269,7 +294,10 @@ class _RoomListScreenState extends State<RoomListScreen> {
                       ),
                       if (!disponible)
                         Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 8,
+                            vertical: 2,
+                          ),
                           decoration: BoxDecoration(
                             color: Colors.red.shade100,
                             borderRadius: BorderRadius.circular(12),
@@ -292,7 +320,7 @@ class _RoomListScreenState extends State<RoomListScreen> {
                     Padding(
                       padding: const EdgeInsets.only(bottom: 4),
                       child: SizedBox(
-                        height: 25, 
+                        height: 25,
                         child: SingleChildScrollView(
                           scrollDirection: Axis.horizontal,
                           child: Row(
@@ -300,7 +328,10 @@ class _RoomListScreenState extends State<RoomListScreen> {
                               return Padding(
                                 padding: const EdgeInsets.only(right: 4.0),
                                 child: Container(
-                                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 8,
+                                    vertical: 4,
+                                  ),
                                   decoration: BoxDecoration(
                                     color: _getServiceColor(servicio),
                                     borderRadius: BorderRadius.circular(12),
@@ -331,14 +362,14 @@ class _RoomListScreenState extends State<RoomListScreen> {
                         ),
                       ),
                     ),
-                  
+
                   // Descripción
                   Text(
                     descripcion,
                     maxLines: 10,
                     overflow: TextOverflow.ellipsis,
                     style: TextStyle(
-                      fontSize: 13, 
+                      fontSize: 13,
                       color: disponible ? Colors.grey[600] : Colors.grey[400],
                     ),
                   ),
@@ -350,7 +381,9 @@ class _RoomListScreenState extends State<RoomListScreen> {
                       '\$${precio.toStringAsFixed(2)} / noche',
                       style: TextStyle(
                         fontWeight: FontWeight.bold,
-                        color: disponible ? const Color(0xFF00897B) : Colors.grey,
+                        color: disponible
+                            ? const Color(0xFF00897B)
+                            : Colors.grey,
                         fontSize: 14,
                       ),
                     ),
@@ -358,9 +391,9 @@ class _RoomListScreenState extends State<RoomListScreen> {
               ),
             ),
             Icon(
-              Icons.info_outline, 
-              color: disponible ? Colors.grey[600] : Colors.grey[400], 
-              size: 24
+              Icons.info_outline,
+              color: disponible ? Colors.grey[600] : Colors.grey[400],
+              size: 24,
             ),
           ],
         ),
@@ -379,9 +412,9 @@ class _RoomListScreenState extends State<RoomListScreen> {
           color: disponible ? Colors.grey[300] : Colors.grey[200],
         ),
         child: Icon(
-          Icons.hotel, 
-          size: 40, 
-          color: disponible ? Colors.grey : Colors.grey[400]
+          Icons.hotel,
+          size: 40,
+          color: disponible ? Colors.grey : Colors.grey[400],
         ),
       );
     }
@@ -417,11 +450,7 @@ class _RoomListScreenState extends State<RoomListScreen> {
               Container(
                 color: Colors.black54,
                 child: const Center(
-                  child: Icon(
-                    Icons.block,
-                    color: Colors.white,
-                    size: 24,
-                  ),
+                  child: Icon(Icons.block, color: Colors.white, size: 24),
                 ),
               ),
           ],
@@ -445,7 +474,8 @@ class _RoomListScreenState extends State<RoomListScreen> {
     if (servicioLower.contains('jacuzzi')) return Icons.hot_tub;
     if (servicioLower.contains('wifi')) return Icons.wifi;
     if (servicioLower.contains('minibar')) return Icons.local_bar;
-    if (servicioLower.contains('servicio al cuarto') || servicioLower.contains('room service')) {
+    if (servicioLower.contains('servicio al cuarto') ||
+        servicioLower.contains('room service')) {
       return Icons.room_service;
     }
     if (servicioLower.contains('tv')) return Icons.tv;

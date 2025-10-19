@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:firebase_core/firebase_core.dart';
-
+import 'package:hm/core/logger.dart';
 import 'core/app_export.dart';
 
 var globalMessengerKey = GlobalKey<ScaffoldMessengerState>();
@@ -16,8 +16,10 @@ Future<void> main() async {
   final prefs = await SharedPreferences.getInstance();
   final isLoggedIn = prefs.getBool('isLoggedIn') ?? false;
 
-  print('🔥 Firebase inicializado correctamente');
-  print('🚀 Iniciando app en: ${isLoggedIn ? 'MainPage' : 'LoginScreen'}');
+  AppLogger.i('🔥 Firebase inicializado correctamente');
+  AppLogger.i(
+    '🚀 Iniciando app en: ${isLoggedIn ? 'MainPage' : 'LoginScreen'}',
+  );
 
   runApp(
     MyApp(

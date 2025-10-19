@@ -60,10 +60,7 @@ class RegisterFormContainer extends StatelessWidget {
     return Container(
       decoration: BoxDecoration(
         color: appTheme.whiteA700,
-        border: Border.all(
-          color: appTheme.blueGray100,
-          width: 1,
-        ),
+        border: Border.all(color: appTheme.blueGray100, width: 1),
         borderRadius: BorderRadius.circular(8.h),
       ),
       padding: EdgeInsets.all(22.h),
@@ -83,8 +80,9 @@ class RegisterFormContainer extends StatelessWidget {
   Widget _buildTitle() {
     return Text(
       title,
-      style: TextStyleHelper.instance.headline24SemiBoldInter
-          .copyWith(height: 1.25),
+      style: TextStyleHelper.instance.headline24SemiBoldInter.copyWith(
+        height: 1.25,
+      ),
     );
   }
 
@@ -110,8 +108,9 @@ class RegisterFormContainer extends StatelessWidget {
       children: [
         Text(
           field.label,
-          style: TextStyleHelper.instance.title16RegularInter
-              .copyWith(height: 1.25),
+          style: TextStyleHelper.instance.title16RegularInter.copyWith(
+            height: 1.25,
+          ),
         ),
         SizedBox(height: 2.h),
         CustomEditText(

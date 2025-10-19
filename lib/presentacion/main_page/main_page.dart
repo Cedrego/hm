@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:hm/core/logger.dart';
 import '../../core/app_export.dart';
 import '../../core/auth_service.dart';
 import '../../core/firebase_service.dart';
@@ -102,7 +103,7 @@ class _MainPageState extends State<MainPage> {
         }
       }
     } catch (e) {
-      print('Error cargando habitación popular: $e');
+      AppLogger.e('Error cargando habitación popular: $e');
     } finally {
       if (mounted) {
         setState(() {
@@ -113,8 +114,6 @@ class _MainPageState extends State<MainPage> {
   }
 
   Future<void> _onLogoutPressed() async {
-    if (!mounted) return;
-
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
@@ -134,13 +133,18 @@ class _MainPageState extends State<MainPage> {
       ),
     );
 
-    if (confirmed == true && mounted) {
+    if (confirmed == true) {
       await AuthService.logout();
-      Navigator.pushNamedAndRemoveUntil(
-        context,
-        AppRoutes.loginScreen,
-        (route) => false,
-      );
+
+      if (!mounted) return;
+
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        Navigator.pushNamedAndRemoveUntil(
+          context,
+          AppRoutes.loginScreen,
+          (route) => false,
+        );
+      });
     }
   }
 
@@ -277,7 +281,7 @@ class _MainPageState extends State<MainPage> {
             ],
           ),
           const SizedBox(height: 16),
-          Container(
+          SizedBox(
             width: double.infinity,
             child: Center(
               child: SizedBox(
@@ -375,7 +379,7 @@ class _MainPageState extends State<MainPage> {
           border: Border.all(color: Colors.amber.shade300),
           boxShadow: [
             BoxShadow(
-              color: Colors.amber.withOpacity(0.1),
+              color: Colors.amber.withAlpha(26),
               blurRadius: 8,
               offset: const Offset(0, 2),
             ),
@@ -539,7 +543,7 @@ class _MainPageState extends State<MainPage> {
               Container(
                 padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
-                  color: color.withOpacity(0.1),
+                  color: color.withAlpha(26),
                   shape: BoxShape.circle,
                 ),
                 child: Icon(icon, size: 30, color: color),
@@ -565,7 +569,7 @@ class _MainPageState extends State<MainPage> {
         color: const Color(0xFF00897B),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.1),
+            color: Colors.black.withAlpha(26),
             blurRadius: 8,
             offset: const Offset(0, -2),
           ),
@@ -616,7 +620,7 @@ class _MainPageState extends State<MainPage> {
           ),
           const SizedBox(height: 6),
           const Text(
-            '© 2024 Hostel Mochileros. Todos los derechos reservados.',
+            '© 2025 Hostel Mochileros. Todos los derechos reservados.',
             style: TextStyle(fontSize: 9, color: Colors.white60),
             textAlign: TextAlign.center,
           ),

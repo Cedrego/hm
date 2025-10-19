@@ -10,12 +10,12 @@ ThemeData get theme => ThemeHelper().themeData();
 class ThemeHelper {
   // A map of custom color themes supported by the app
   final Map<String, LightCodeColors> _supportedCustomColor = {
-    'lightCode': LightCodeColors()
+    'lightCode': LightCodeColors(),
   };
 
   // A map of color schemes supported by the app
   final Map<String, ColorScheme> _supportedColorScheme = {
-    'lightCode': ColorSchemes.lightCodeColorScheme
+    'lightCode': ColorSchemes.lightCodeColorScheme,
   };
 
   /// Changes the app theme to [newTheme].

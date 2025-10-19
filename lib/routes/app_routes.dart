@@ -3,14 +3,13 @@ import 'package:hm/presentacion/main_page/main_page.dart';
 import '../presentacion/registration_screen/registration_screen.dart';
 import '../presentacion/login_screen/login_screen.dart';
 import '../presentacion/room_creation_screen/room_creation_screen.dart';
-import '../presentacion/profile/profileScreen.dart';
+import '../presentacion/profile/profile_screen.dart';
 import '../presentacion/room_list/room_list_screen.dart';
 import '../presentacion/room_list/room_detail_screen.dart';
 import '../presentacion/room_list/reservation_list_screen.dart';
 import '../presentacion/room_list/reservation_form_screen.dart';
 import '../presentacion/reservas/misreservas_screen.dart';
 import '../presentacion/reservas/reserva_detalle_screen.dart';
-
 
 class AppRoutes {
   static const String registrationScreen = '/registration_screen';
@@ -34,27 +33,32 @@ class AppRoutes {
     mainPage: (context) => const MainPage(),
 
     profileScreen: (context) {
-      final userData = ModalRoute.of(context)!.settings.arguments as Map<String, dynamic>? ?? {};
+      final userData =
+          ModalRoute.of(context)!.settings.arguments as Map<String, dynamic>? ??
+          {};
       return ProfileScreen(userData: userData);
     },
-    
+
     roomListScreen: (context) => const RoomListScreen(),
-    
+
     // ✅ Se utiliza esta definición que recibe argumentos
     roomDetailScreen: (context) {
-      final Map<String, dynamic> room = ModalRoute.of(context)!.settings.arguments as Map<String, dynamic>;
+      final Map<String, dynamic> room =
+          ModalRoute.of(context)!.settings.arguments as Map<String, dynamic>;
       return RoomDetailScreen(room: room);
     },
 
     // ✅ Ruta para el formulario de reserva, recibe la habitación como argumento
     reservationFormScreen: (context) {
-      final Map<String, dynamic> room = ModalRoute.of(context)!.settings.arguments as Map<String, dynamic>;
+      final Map<String, dynamic> room =
+          ModalRoute.of(context)!.settings.arguments as Map<String, dynamic>;
       return ReservationFormScreen(room: room);
     },
-    
+
     // ✅ Ruta para la lista de reservas, recibe la habitación como argumento
     reservationListScreen: (context) {
-      final Map<String, dynamic> room = ModalRoute.of(context)!.settings.arguments as Map<String, dynamic>;
+      final Map<String, dynamic> room =
+          ModalRoute.of(context)!.settings.arguments as Map<String, dynamic>;
       return ReservationListScreen(room: room);
     },
     misReservas: (context) => const MisReservasScreen(),

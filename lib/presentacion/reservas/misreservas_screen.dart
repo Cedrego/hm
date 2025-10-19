@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:cached_network_image/cached_network_image.dart';
+import 'package:hm/core/logger.dart';
 import '../../core/firebase_service.dart';
 import '../../core/auth_service.dart';
 import '../../routes/app_routes.dart';
@@ -275,7 +276,7 @@ class _MisReservasScreenState extends State<MisReservasScreen> {
       final doc = await _firebaseService.getHabitacionPorId(habitacionId);
       return doc;
     } catch (e) {
-      print('Error obteniendo datos de habitación $habitacionId: $e');
+      AppLogger.e('Error obteniendo datos de habitación $habitacionId: $e');
       return null;
     }
   }
@@ -391,10 +392,10 @@ class _MisReservasScreenState extends State<MisReservasScreen> {
                         vertical: 4,
                       ),
                       decoration: BoxDecoration(
-                        color: const Color(0xFF00897B).withOpacity(0.1),
+                        color: const Color(0xFF00897B).withAlpha(26),
                         borderRadius: BorderRadius.circular(12),
                         border: Border.all(
-                          color: const Color(0xFF00897B).withOpacity(0.3),
+                          color: const Color(0xFF00897B).withAlpha(76),
                         ),
                       ),
                       child: Text(
@@ -593,6 +594,8 @@ class _MisReservasScreenState extends State<MisReservasScreen> {
     try {
       await _firebaseService.cancelarReserva(idReserva);
 
+      if (!mounted) return;
+
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text('Reserva cancelada exitosamente'),
@@ -602,6 +605,8 @@ class _MisReservasScreenState extends State<MisReservasScreen> {
 
       _cargarReservas();
     } catch (e) {
+      if (!mounted) return;
+
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text('Error al cancelar: $e'),

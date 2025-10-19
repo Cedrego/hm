@@ -17,11 +17,15 @@ class RoomDetailScreen extends StatefulWidget {
 
 class _RoomDetailScreenState extends State<RoomDetailScreen> {
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
-  
+
   bool _isLoadingUserData = true;
   Map<String, dynamic>? _userData;
   bool get _isAdmin => _userData?['rol'] == 'admin';
-  final currencyFormatter = NumberFormat.currency(locale: 'es_ES', symbol: '\$', decimalDigits: 2);
+  final currencyFormatter = NumberFormat.currency(
+    locale: 'es_ES',
+    symbol: '\$',
+    decimalDigits: 2,
+  );
 
   @override
   void initState() {
@@ -45,7 +49,6 @@ class _RoomDetailScreenState extends State<RoomDetailScreen> {
     }
   }
 
-  // ✅ MÉTODO CORREGIDO - Sin parámetro context
   Future<void> _onLogoutPressed() async {
     final confirmed = await showDialog<bool>(
       context: context,
@@ -66,13 +69,18 @@ class _RoomDetailScreenState extends State<RoomDetailScreen> {
       ),
     );
 
-    if (confirmed == true && mounted) {
+    if (confirmed == true) {
       await AuthService.logout();
-      Navigator.pushNamedAndRemoveUntil(
-        context,
-        AppRoutes.loginScreen,
-        (route) => false,
-      );
+
+      if (!mounted) return;
+
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        Navigator.pushNamedAndRemoveUntil(
+          context,
+          AppRoutes.loginScreen,
+          (route) => false,
+        );
+      });
     }
   }
 
@@ -81,17 +89,20 @@ class _RoomDetailScreenState extends State<RoomDetailScreen> {
     final room = widget.room;
     final String nombre = room['nombre'] ?? 'Habitación';
     final String descripcion = room['descripcion'] ?? 'Sin descripción';
-    final String imagenUrl = room['imagenUrl'] ?? ''; // ← YA USA imagenUrl (CORRECTO)
+    final String imagenUrl =
+        room['imagenUrl'] ?? ''; // ← YA USA imagenUrl (CORRECTO)
     final dynamic precioDia = room['precio'] ?? 0;
-    final double precio = (precioDia is int) ? precioDia.toDouble() : (precioDia as double? ?? 0.0);
+    final double precio = (precioDia is int)
+        ? precioDia.toDouble()
+        : (precioDia as double? ?? 0.0);
     final List<dynamic> serviciosAdicionales = room['servicios'] ?? [];
-    final String idHabitacion = room['id'] ?? ''; // ← CAMBIO: 'id' en lugar de 'idHabitacion'
-    final bool disponible = room['disponible'] ?? true; // ← AGREGAR DISPONIBILIDAD
-    
+    final String idHabitacion =
+        room['id'] ?? ''; // ← CAMBIO: 'id' en lugar de 'idHabitacion'
+    final bool disponible =
+        room['disponible'] ?? true; // ← AGREGAR DISPONIBILIDAD
+
     if (_isLoadingUserData) {
-      return const Scaffold(
-        body: Center(child: CircularProgressIndicator()),
-      );
+      return const Scaffold(body: Center(child: CircularProgressIndicator()));
     }
 
     return Scaffold(
@@ -114,30 +125,45 @@ class _RoomDetailScreenState extends State<RoomDetailScreen> {
             padding: EdgeInsets.zero,
             children: [
               // 1. Imagen Principal
-              _buildImageSection(imagenUrl, disponible), // ← AGREGAR DISPONIBILIDAD
-
+              _buildImageSection(
+                imagenUrl,
+                disponible,
+              ), // ← AGREGAR DISPONIBILIDAD
               // 2. Contenido Principal
               Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 20,
+                ),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     // Nombre y Precio
-                    _buildNameAndPrice(nombre, precio, disponible), // ← AGREGAR DISPONIBILIDAD
+                    _buildNameAndPrice(
+                      nombre,
+                      precio,
+                      disponible,
+                    ), // ← AGREGAR DISPONIBILIDAD
                     const SizedBox(height: 16),
-                    
+
                     // Descripción
                     const Text(
                       'Descripción',
-                      style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Color(0xFF333333)),
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                        color: Color(0xFF333333),
+                      ),
                     ),
                     const SizedBox(height: 8),
                     Text(
                       descripcion,
                       style: TextStyle(
-                        fontSize: 16, 
-                        height: 1.5, 
-                        color: disponible ? Color(0xFF555555) : Colors.grey[400] // ← ESTADO DISPONIBLE
+                        fontSize: 16,
+                        height: 1.5,
+                        color: disponible
+                            ? Color(0xFF555555)
+                            : Colors.grey[400], // ← ESTADO DISPONIBLE
                       ),
                     ),
                     const SizedBox(height: 20),
@@ -145,19 +171,31 @@ class _RoomDetailScreenState extends State<RoomDetailScreen> {
                     // Servicios
                     const Text(
                       'Servicios Incluidos',
-                      style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Color(0xFF333333)),
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                        color: Color(0xFF333333),
+                      ),
                     ),
                     const SizedBox(height: 10),
-                    _buildServicesChips(serviciosAdicionales, disponible), // ← AGREGAR DISPONIBILIDAD
+                    _buildServicesChips(
+                      serviciosAdicionales,
+                      disponible,
+                    ), // ← AGREGAR DISPONIBILIDAD
                     const SizedBox(height: 80),
                   ],
                 ),
               ),
             ],
           ),
-          
+
           // 3. Barra de Botones Inferior Fija
-          _buildBottomButtonBar(context, idHabitacion, room, disponible), // ← AGREGAR DISPONIBILIDAD
+          _buildBottomButtonBar(
+            context,
+            idHabitacion,
+            room,
+            disponible,
+          ), // ← AGREGAR DISPONIBILIDAD
         ],
       ),
     );
@@ -171,7 +209,7 @@ class _RoomDetailScreenState extends State<RoomDetailScreen> {
         color: Colors.grey.shade200,
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.1),
+            color: Colors.black.withAlpha(26),
             blurRadius: 10,
             offset: const Offset(0, 5),
           ),
@@ -180,7 +218,7 @@ class _RoomDetailScreenState extends State<RoomDetailScreen> {
       child: Stack(
         children: [
           // ✅ USAR CACHED NETWORK IMAGE PARA CLOUDINARY
-          imagenUrl.isNotEmpty 
+          imagenUrl.isNotEmpty
               ? CachedNetworkImage(
                   imageUrl: imagenUrl,
                   fit: BoxFit.cover,
@@ -189,10 +227,11 @@ class _RoomDetailScreenState extends State<RoomDetailScreen> {
                   placeholder: (context, url) => Center(
                     child: CircularProgressIndicator(color: Color(0xFF00897B)),
                   ),
-                  errorWidget: (context, url, error) => _buildPlaceholderImage(),
+                  errorWidget: (context, url, error) =>
+                      _buildPlaceholderImage(),
                 )
               : _buildPlaceholderImage(),
-          
+
           // Overlay si no está disponible
           if (!disponible)
             Container(
@@ -228,7 +267,10 @@ class _RoomDetailScreenState extends State<RoomDetailScreen> {
         children: [
           Icon(Icons.hotel, size: 60, color: Colors.grey.shade400),
           const SizedBox(height: 8),
-          Text('Imagen no disponible', style: TextStyle(color: Colors.grey.shade600)),
+          Text(
+            'Imagen no disponible',
+            style: TextStyle(color: Colors.grey.shade600),
+          ),
         ],
       ),
     );
@@ -293,7 +335,10 @@ class _RoomDetailScreenState extends State<RoomDetailScreen> {
   }
 
   // ✅ MÉTODO ACTUALIZADO CON DISPONIBILIDAD
-  Widget _buildServicesChips(List<dynamic> serviciosAdicionales, bool disponible) {
+  Widget _buildServicesChips(
+    List<dynamic> serviciosAdicionales,
+    bool disponible,
+  ) {
     if (serviciosAdicionales.isEmpty) {
       return Text(
         'No se especificaron servicios adicionales.',
@@ -324,7 +369,8 @@ class _RoomDetailScreenState extends State<RoomDetailScreen> {
     } else if (servicioLower.contains('minibar')) {
       icon = Icons.local_bar;
       color = Colors.orange.shade400;
-    } else if (servicioLower.contains('servicio al cuarto') || servicioLower.contains('room service')) {
+    } else if (servicioLower.contains('servicio al cuarto') ||
+        servicioLower.contains('room service')) {
       icon = Icons.room_service;
       color = Colors.green.shade400;
     } else {
@@ -335,9 +381,9 @@ class _RoomDetailScreenState extends State<RoomDetailScreen> {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
       decoration: BoxDecoration(
-        color: color.withOpacity(disponible ? 0.1 : 0.05),
+        color: color.withAlpha(disponible ? 26 : 13),
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: color.withOpacity(disponible ? 0.3 : 0.1)),
+        border: Border.all(color: color.withAlpha(disponible ? 76 : 26)),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
@@ -347,9 +393,9 @@ class _RoomDetailScreenState extends State<RoomDetailScreen> {
           Text(
             servicio,
             style: TextStyle(
-              fontSize: 14, 
-              color: disponible ? color : Colors.grey, 
-              fontWeight: FontWeight.w600
+              fontSize: 14,
+              color: disponible ? color : Colors.grey,
+              fontWeight: FontWeight.w600,
             ),
           ),
         ],
@@ -358,7 +404,12 @@ class _RoomDetailScreenState extends State<RoomDetailScreen> {
   }
 
   // ✅ MÉTODO ACTUALIZADO CON DISPONIBILIDAD
-  Widget _buildBottomButtonBar(BuildContext context, String idHabitacion, Map<String, dynamic> room, bool disponible) {
+  Widget _buildBottomButtonBar(
+    BuildContext context,
+    String idHabitacion,
+    Map<String, dynamic> room,
+    bool disponible,
+  ) {
     return Positioned(
       bottom: 0,
       left: 0,
@@ -369,7 +420,7 @@ class _RoomDetailScreenState extends State<RoomDetailScreen> {
           color: Colors.white,
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.1),
+              color: Colors.black.withAlpha(26),
               blurRadius: 10,
               offset: const Offset(0, -5),
             ),
@@ -403,30 +454,37 @@ class _RoomDetailScreenState extends State<RoomDetailScreen> {
                   ),
                 ),
               ),
-            
+
             if (_isAdmin) const SizedBox(width: 12),
 
             // Botón Reservar Ahora (Solo si está disponible)
             Expanded(
               child: ElevatedButton.icon(
-                onPressed: disponible ? () {
-                  Navigator.pushNamed(
-                    context,
-                    AppRoutes.reservationFormScreen,
-                    arguments: room,
-                  );
-                } : null, // ← DESHABILITAR SI NO ESTÁ DISPONIBLE
-                icon: Icon(Icons.calendar_month, color: disponible ? Colors.white : Colors.grey),
+                onPressed: disponible
+                    ? () {
+                        Navigator.pushNamed(
+                          context,
+                          AppRoutes.reservationFormScreen,
+                          arguments: room,
+                        );
+                      }
+                    : null, // ← DESHABILITAR SI NO ESTÁ DISPONIBLE
+                icon: Icon(
+                  Icons.calendar_month,
+                  color: disponible ? Colors.white : Colors.grey,
+                ),
                 label: Text(
                   disponible ? 'Reservar Ahora' : 'No Disponible',
                   style: TextStyle(
-                    fontSize: 16, 
+                    fontSize: 16,
                     fontWeight: FontWeight.bold,
                     color: disponible ? Colors.white : Colors.grey,
                   ),
                 ),
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: disponible ? Color(0xFF00897B) : Colors.grey.shade300,
+                  backgroundColor: disponible
+                      ? Color(0xFF00897B)
+                      : Colors.grey.shade300,
                   foregroundColor: Colors.white,
                   padding: const EdgeInsets.symmetric(vertical: 14),
                   shape: RoundedRectangleBorder(
