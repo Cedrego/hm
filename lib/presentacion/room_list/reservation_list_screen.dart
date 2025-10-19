@@ -132,17 +132,36 @@ class _ReservationListScreenState extends State<ReservationListScreen> {
     }
   }
 
-  void _showReservationDetails(Map<String, dynamic> reservation) {
-    final user = reservation['usuario'] ?? {};
-    if (user.isNotEmpty) {
-      Navigator.push(
-        context,
-        MaterialPageRoute(builder: (_) => UserProfileScreen(user: user)),
-      );
+  void _showReservationDetails(Map<String, dynamic> reservation) async {
+    final userId = reservation['idUsuario'];
+
+    if (userId != null && userId is String) {
+      try {
+        final userData = await FirebaseService().getUserById(userId);
+
+        if (userData != null && mounted) {
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (_) => UserProfileScreen(user: userData),
+            ),
+          );
+        } else {
+          _showError('Usuario no encontrado');
+        }
+      } catch (e) {
+        _showError('Error al cargar datos del usuario');
+      }
     } else {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Datos de usuario no disponibles.')),
-      );
+      _showError('ID de usuario no disponible');
+    }
+  }
+
+  void _showError(String message) {
+    if (mounted) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(message)));
     }
   }
 

@@ -117,6 +117,35 @@ class FirebaseService {
     }
   }
 
+  // Obtener usuario por ID
+  Future<Map<String, dynamic>?> getUserById(String userId) async {
+    try {
+      AppLogger.i('🔍 Buscando usuario con ID: $userId');
+
+      final doc = await _firestore.collection('usuarios').doc(userId).get();
+
+      if (!doc.exists) {
+        AppLogger.w('⚠️ Usuario no encontrado con ID: $userId');
+        return null;
+      }
+
+      final userData = doc.data()!;
+
+      // Crear copia segura sin password
+      final userDataSafe = Map<String, dynamic>.from(userData);
+      userDataSafe.remove('password');
+
+      AppLogger.success(
+        '✅ Usuario encontrado: ${userDataSafe['nombre'] ?? 'Sin nombre'}',
+      );
+
+      return {'id': doc.id, ...userDataSafe};
+    } catch (e) {
+      AppLogger.e('❌ Error obteniendo usuario $userId: $e');
+      throw Exception('Error al cargar datos del usuario: $e');
+    }
+  }
+
   // =========================================================================
   // 🏨 HABITACIONES
   // =========================================================================
