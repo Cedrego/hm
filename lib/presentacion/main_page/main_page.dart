@@ -36,11 +36,7 @@ class _MainPageState extends State<MainPage> {
         _userData = userData;
         _isLoading = false;
       });
-
-      // ✅ CARGAR HABITACIÓN POPULAR SOLO SI ES HUÉSPED
-      if (_userData?['rol'] == 'huesped') {
-        _cargarHabitacionPopular();
-      }
+      _cargarHabitacionPopular();
     } catch (e) {
       if (!mounted) return;
       setState(() {
@@ -162,7 +158,6 @@ class _MainPageState extends State<MainPage> {
   @override
   Widget build(BuildContext context) {
     final bool isAdmin = _userData?['rol'] == 'admin';
-    final bool isHuesped = _userData?['rol'] == 'huesped';
 
     return Scaffold(
       key: _scaffoldKey,
@@ -211,12 +206,9 @@ class _MainPageState extends State<MainPage> {
                         ),
                         const SizedBox(height: 20),
                         _buildFeatureCards(isAdmin: isAdmin),
-                        if (isHuesped) ...[
-                          const SizedBox(height: 30),
-                          _buildHabitacionPopularSection(),
-                          const SizedBox(height: 20),
-                        ] else
-                          const SizedBox(height: 20),
+                        const SizedBox(height: 30),
+                        _buildHabitacionPopularSection(),
+                        const SizedBox(height: 20),
                       ],
                     ),
                   ),
@@ -245,15 +237,16 @@ class _MainPageState extends State<MainPage> {
           onTap: () {
             Navigator.pushNamed(context, AppRoutes.roomCreationScreen);
           },
+        )
+      else
+        _buildFeatureCard(
+          icon: Icons.calendar_today,
+          title: 'Reservas',
+          color: Colors.green,
+          onTap: () {
+            Navigator.pushNamed(context, AppRoutes.misReservas);
+          },
         ),
-      _buildFeatureCard(
-        icon: Icons.calendar_today,
-        title: 'Reservas',
-        color: Colors.green,
-        onTap: () {
-          Navigator.pushNamed(context, AppRoutes.misReservas);
-        },
-      ),
       _buildFeatureCard(
         icon: Icons.person,
         title: 'Perfil',
@@ -270,38 +263,26 @@ class _MainPageState extends State<MainPage> {
       ),
     ];
 
-    if (!isAdmin) {
-      return Column(
-        children: [
-          Row(
-            children: [
-              Expanded(child: featureCards[0]),
-              const SizedBox(width: 16),
-              Expanded(child: featureCards[1]),
-            ],
-          ),
-          const SizedBox(height: 16),
-          SizedBox(
-            width: double.infinity,
-            child: Center(
-              child: SizedBox(
-                width: MediaQuery.of(context).size.width / 2 - 20,
-                child: featureCards[2],
-              ),
+    return Column(
+      children: [
+        Row(
+          children: [
+            Expanded(child: featureCards[0]),
+            const SizedBox(width: 16),
+            Expanded(child: featureCards[1]),
+          ],
+        ),
+        const SizedBox(height: 16),
+        SizedBox(
+          width: double.infinity,
+          child: Center(
+            child: SizedBox(
+              width: MediaQuery.of(context).size.width / 2 - 20,
+              child: featureCards[2],
             ),
           ),
-        ],
-      );
-    }
-
-    return GridView.count(
-      crossAxisCount: 2,
-      crossAxisSpacing: 16,
-      mainAxisSpacing: 16,
-      childAspectRatio: 1.0,
-      shrinkWrap: true,
-      physics: const NeverScrollableScrollPhysics(),
-      children: featureCards,
+        ),
+      ],
     );
   }
 
