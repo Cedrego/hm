@@ -1,5 +1,7 @@
 import 'dart:convert';
 import 'dart:io';
+// Necesario para verificar si estamos en la web
+import 'package:flutter/foundation.dart'; 
 import 'package:image_picker/image_picker.dart';
 import 'package:flutter/material.dart';
 import '../custom_app_bar.dart';
@@ -78,7 +80,7 @@ class _RoomCreationScreenState extends State<RoomCreationScreen> {
     }
   }
 
-  // 🆕 Método para seleccionar imagen
+  // CORREGIDO: Método para seleccionar imagen compatible con web
   Future<void> _seleccionarImagen() async {
     try {
       AppLogger.i('📷 Seleccionando imagen de habitación...');
@@ -91,9 +93,18 @@ class _RoomCreationScreenState extends State<RoomCreationScreen> {
       );
 
       if (pickedFile != null) {
-        final bytes = await File(pickedFile.path).readAsBytes();
+        // CORRECCIÓN CLAVE: Usar readAsBytes() directamente del XFile (funciona en Web y móvil)
+        final bytes = await pickedFile.readAsBytes(); 
+        
         setState(() {
-          _imagenFile = File(pickedFile.path);
+          // Asignar dart:io:File solo si no estamos en la web. 
+          // Esto evita el error "Unsupported operation: _Namespace".
+          if (!kIsWeb) {
+            _imagenFile = File(pickedFile.path);
+          } else {
+            _imagenFile = null; // No usamos dart:io:File en la web
+          }
+          
           _imagenBase64 = base64Encode(bytes);
         });
 
@@ -362,7 +373,7 @@ class _RoomCreationScreenState extends State<RoomCreationScreen> {
                   ),
                 ),
                 const SizedBox(height: 8),
-                _buildImageSelector(),
+                _buildImageSelector(), // CORREGIDO: Usa _imagenBase64 para la web
 
                 const SizedBox(height: 30),
 
@@ -459,8 +470,36 @@ class _RoomCreationScreenState extends State<RoomCreationScreen> {
     );
   }
 
-  // 🆕 Widget para seleccionar imagen con preview
+  // CORREGIDO: Widget para seleccionar imagen con preview compatible con Base64 (Web)
   Widget _buildImageSelector() {
+    // Define el contenido del preview
+    Widget previewContent;
+
+    if (_imagenFile != null) {
+      // Caso 1: Preview con dart:io:File (Móvil/Desktop)
+      previewContent = Image.file(_imagenFile!, fit: BoxFit.cover);
+    } else if (_imagenBase64 != null) {
+      // Caso 2: Preview con Base64 (Web/Fallback)
+      try {
+        final decodedBytes = base64Decode(_imagenBase64!);
+        previewContent = Image.memory(decodedBytes, fit: BoxFit.cover);
+      } catch (e) {
+        // En caso de error de decodificación
+        previewContent = const Icon(
+            Icons.error, 
+            size: 80, 
+            color: Colors.red,
+        );
+      }
+    } else {
+      // Caso 3: Placeholder (Ninguna imagen)
+      previewContent = Icon(
+        Icons.image, 
+        size: 80, 
+        color: Colors.grey.shade400,
+      );
+    }
+
     return Container(
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
@@ -470,30 +509,19 @@ class _RoomCreationScreenState extends State<RoomCreationScreen> {
       child: Column(
         children: [
           // Preview de la imagen
-          if (_imagenFile != null)
-            Container(
-              height: 200,
-              width: double.infinity,
-              margin: const EdgeInsets.only(bottom: 12),
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(8),
-                image: DecorationImage(
-                  image: FileImage(_imagenFile!),
-                  fit: BoxFit.cover,
-                ),
-              ),
-            )
-          else
-            Container(
-              height: 200,
-              width: double.infinity,
-              margin: const EdgeInsets.only(bottom: 12),
-              decoration: BoxDecoration(
-                color: Colors.grey.shade200,
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: Icon(Icons.image, size: 80, color: Colors.grey.shade400),
+          Container(
+            height: 200,
+            width: double.infinity,
+            margin: const EdgeInsets.only(bottom: 12),
+            decoration: BoxDecoration(
+              color: Colors.grey.shade200,
+              borderRadius: BorderRadius.circular(8),
             ),
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(8),
+              child: previewContent,
+            ),
+          ),
 
           // Botón para seleccionar
           SizedBox(
@@ -502,7 +530,9 @@ class _RoomCreationScreenState extends State<RoomCreationScreen> {
               onPressed: _seleccionarImagen,
               icon: const Icon(Icons.upload_file),
               label: Text(
-                _imagenFile != null ? 'Cambiar imagen' : 'Seleccionar imagen',
+                _imagenFile != null || _imagenBase64 != null 
+                    ? 'Cambiar imagen' 
+                    : 'Seleccionar imagen',
               ),
               style: ElevatedButton.styleFrom(
                 backgroundColor: _kPrimaryColor,

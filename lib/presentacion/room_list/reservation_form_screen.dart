@@ -198,7 +198,7 @@ class _ReservationFormScreenState extends State<ReservationFormScreen> {
       );
       Navigator.pushNamed(
         context,
-        AppRoutes.reservationListScreen,
+        AppRoutes.misReservas,
         arguments: widget.room,
       );
     } catch (e) {

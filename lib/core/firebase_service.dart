@@ -49,6 +49,49 @@ class FirebaseService {
     }
   }
 
+  // 🎯 FUNCIÓN DE AYUDA CLAVE: Une los datos de Habitación y Usuario a la Reserva
+  Future<Map<String, dynamic>> _mapReservaConDetalles(
+    Map<String, dynamic> data,
+    String id,
+  ) async {
+    data['id'] = id; 
+    final idHabitacion = data['idHabitacion'] as String?;
+    final idUsuario = data['idUsuario'] as String?;
+
+    // 1. Obtener detalles de la HABITACIÓN y adjuntar NUEVOS campos
+    if (idHabitacion != null) {
+      final habitacionDoc = await _firestore.collection('habitaciones').doc(idHabitacion).get();
+      if (habitacionDoc.exists) {
+        final habitacionData = habitacionDoc.data()!;
+        // Añadimos el nombre de la habitación
+        data['nombreHabitacion'] = habitacionData['nombre'] ?? 'Habitación Desconocida';
+        // Añadimos la URL de la imagen de la habitación (usando la clave existente 'imagenUrl')
+        data['imagenUrlHabitacion'] = habitacionData['imagenUrl']; 
+      } else {
+        data['nombreHabitacion'] = 'Habitación Eliminada';
+      }
+    } else {
+      data['nombreHabitacion'] = 'Habitación (N/A)';
+    }
+
+    // 2. Obtener detalles del USUARIO y adjuntar NUEVO campo
+    if (idUsuario != null) {
+      final userDoc = await _firestore.collection('usuarios').doc(idUsuario).get();
+      if (userDoc.exists) {
+        final userData = userDoc.data()!;
+        // Añadimos el nombre del usuario
+        data['nombreUsuario'] = userData['nombre'] ?? 'Usuario Desconocido'; 
+      } else {
+        data['nombreUsuario'] = 'Usuario Eliminado';
+      }
+    } else {
+      data['nombreUsuario'] = 'Usuario (N/A)';
+    }
+
+    return data;
+  }
+  // FIN DE LA FUNCIÓN DE AYUDA
+
   // MÉTODO LOGIN (solo este por ahora para probar)
   Future<Map<String, dynamic>> login(String email, String password) async {
     _checkInitialization();
@@ -373,7 +416,7 @@ class FirebaseService {
     return dias * precioDiario;
   }
 
-  // Obtener reservas por habitación
+  // Obtener reservas por habitación (MODIFICADO para adjuntar detalles)
   Stream<List<Map<String, dynamic>>> getReservasPorHabitacion(
     String habitacionId,
   ) {
@@ -384,15 +427,20 @@ class FirebaseService {
         .where('idHabitacion', isEqualTo: habitacionId)
         .orderBy('fechaReserva', descending: true)
         .snapshots()
-        .map(
-          (snapshot) => snapshot.docs.map((doc) {
-            final data = doc.data();
-            return {'id': doc.id, ...data};
-          }).toList(),
+        .asyncMap(
+          (snapshot) async {
+            // Mapeamos de forma asíncrona para obtener los detalles de la habitación y el usuario
+            final List<Future<Map<String, dynamic>>> futureReservas = snapshot.docs.map((doc) {
+              final data = doc.data();
+              return _mapReservaConDetalles(data, doc.id); // Llama a la función de mapeo
+            }).toList();
+            
+            return await Future.wait(futureReservas); // Espera a que todas las búsquedas terminen
+          },
         );
   }
 
-  // Obtener reservas por usuario
+  // Obtener reservas por usuario (MODIFICADO para adjuntar detalles)
   Stream<List<Map<String, dynamic>>> getReservasPorUsuario(String usuarioId) {
     _checkInitialization(); // ✅ VERIFICAR INICIALIZACIÓN
     
@@ -401,11 +449,16 @@ class FirebaseService {
         .where('idUsuario', isEqualTo: usuarioId)
         .orderBy('fechaReserva', descending: true)
         .snapshots()
-        .map(
-          (snapshot) => snapshot.docs.map((doc) {
-            final data = doc.data();
-            return {'id': doc.id, ...data};
-          }).toList(),
+        .asyncMap(
+          (snapshot) async {
+            // Mapeamos de forma asíncrona para obtener los detalles de la habitación y el usuario
+            final List<Future<Map<String, dynamic>>> futureReservas = snapshot.docs.map((doc) {
+              final data = doc.data();
+              return _mapReservaConDetalles(data, doc.id); // Llama a la función de mapeo
+            }).toList();
+            
+            return await Future.wait(futureReservas); // Espera a que todas las búsquedas terminen
+          },
         );
   }
 
@@ -419,7 +472,7 @@ class FirebaseService {
     });
   }
 
-  // MÉTODO PARA OBTENER TODAS LAS RESERVAS (Habitacion mas popular)
+  // MÉTODO PARA OBTENER TODAS LAS RESERVAS (Habitacion mas popular) (MODIFICADO para adjuntar detalles)
   Future<List<Map<String, dynamic>>> getTodasLasReservas() async {
     _checkInitialization(); // ✅ VERIFICAR INICIALIZACIÓN
     
@@ -429,10 +482,14 @@ class FirebaseService {
           .where('estado', isEqualTo: 'activa')
           .get();
 
-      return querySnapshot.docs.map((doc) {
+      // Aplicar el mapeo de detalles también aquí para asegurar la información
+      final List<Future<Map<String, dynamic>>> futureReservas = querySnapshot.docs.map((doc) {
         final data = doc.data();
-        return {'id': doc.id, ...data};
+        return _mapReservaConDetalles(data, doc.id);
       }).toList();
+      
+      return await Future.wait(futureReservas);
+      
     } catch (e) {
       AppLogger.e('Error obteniendo reservas: $e');
       return [];

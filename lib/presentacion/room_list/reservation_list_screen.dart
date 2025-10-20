@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'dart:convert';
 import '../../core/auth_service.dart';
 import '../custom_app_bar.dart';
 import '../app_drawer.dart';
@@ -35,8 +36,7 @@ class _ReservationListScreenState extends State<ReservationListScreen> {
   @override
   void initState() {
     super.initState();
-    _loadUserData();
-    _loadReservations();
+    _loadUserData(); 
   }
 
   Future<void> _loadUserData() async {
@@ -47,47 +47,77 @@ class _ReservationListScreenState extends State<ReservationListScreen> {
         _userData = userData;
         _isLoadingUserData = false;
       });
+      _loadReservations(); 
     } catch (e) {
       if (!mounted) return;
       setState(() {
         _isLoadingUserData = false;
       });
+      _loadReservations(); 
     }
   }
 
   Future<void> _loadReservations() async {
     if (!mounted) return;
+
+    if (_isLoadingUserData) {
+      return;
+    }
+    
+    if (_userData == null) {
+        if (!mounted) return;
+        setState(() {
+          _errorMessage = 'No se pudo obtener la sesión del usuario.';
+          _isLoadingReservations = false;
+        });
+        return;
+    }
+
+
     setState(() {
       _isLoadingReservations = true;
       _errorMessage = '';
     });
 
     try {
-      final idHabitacion = widget.room['id'] ?? '';
-      if (idHabitacion.isEmpty) {
-        throw Exception('ID de habitación no encontrado.');
+      Stream<List<Map<String, dynamic>>> reservationStream;
+      final idUsuario = _userData!['id'] as String;
+
+      if (_isAdmin) {
+        final idHabitacion = widget.room['id'] ?? '';
+        
+        if (idHabitacion.isEmpty) {
+           // Si no se pasó ID de habitación, se carga solo las del Admin (comportamiento por defecto)
+           // NOTA: Esto no es ideal si el Admin quiere ver *todas* las reservas.
+           // Para ver *todas* las reservas, se debería crear una función específica en FirebaseService.
+           reservationStream = firebaseService.getReservasPorUsuario(idUsuario);
+        } else {
+           // Muestra reservas de una habitación específica (Admin)
+           reservationStream = firebaseService.getReservasPorHabitacion(idHabitacion);
+        }
+      } else {
+        // Muestra reservas del usuario logueado
+        reservationStream = firebaseService.getReservasPorUsuario(idUsuario);
       }
 
-      firebaseService
-          .getReservasPorHabitacion(idHabitacion)
-          .listen(
-            (listaReservas) {
-              if (mounted) {
-                setState(() {
-                  reservations = listaReservas;
-                  _isLoadingReservations = false;
-                });
-              }
-            },
-            onError: (error) {
-              if (mounted) {
-                setState(() {
-                  _errorMessage = error.toString();
-                  _isLoadingReservations = false;
-                });
-              }
-            },
-          );
+      reservationStream.listen(
+        (listaReservas) {
+          if (mounted) {
+            setState(() {
+              reservations = listaReservas;
+              _isLoadingReservations = false;
+            });
+          }
+        },
+        onError: (error) {
+          if (mounted) {
+            setState(() {
+              _errorMessage = error.toString();
+              _isLoadingReservations = false;
+            });
+          }
+        },
+      );
     } catch (e) {
       if (!mounted) return;
       setState(() {
@@ -133,37 +163,38 @@ class _ReservationListScreenState extends State<ReservationListScreen> {
   }
 
   void _showReservationDetails(Map<String, dynamic> reservation) async {
-  final userId = reservation['idUsuario'];
-  
-  if (userId != null && userId is String) {
-    try {
-      final userData = await firebaseService.getUserById(userId);
-      
-      if (userData != null && mounted) {
-        Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder: (_) => UserProfileScreen(user: userData),
-          ),
-        );
-      } else {
-        _showError('Usuario no encontrado');
+    // Usamos el idUsuario que viene en el documento de reserva
+    final userId = reservation['idUsuario'];
+    
+    if (userId != null && userId is String) {
+      try {
+        final userData = await firebaseService.getUserById(userId);
+        
+        if (userData != null && mounted) {
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (_) => UserProfileScreen(user: userData),
+            ),
+          );
+        } else {
+          _showError('Usuario no encontrado');
+        }
+      } catch (e) {
+        _showError('Error al cargar datos del usuario');
       }
-    } catch (e) {
-      _showError('Error al cargar datos del usuario');
+    } else {
+      _showError('ID de usuario no disponible');
     }
-  } else {
-    _showError('ID de usuario no disponible');
   }
-}
 
-void _showError(String message) {
-  if (mounted) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(message)),
-    );
+  void _showError(String message) {
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(message)),
+      );
+    }
   }
-}
 
   Color _getStatusColor(String estado) {
     switch (estado) {
@@ -252,9 +283,14 @@ void _showError(String message) {
                 children: [
                   Icon(Icons.event_busy, size: 80, color: Colors.grey.shade400),
                   const SizedBox(height: 16),
-                  const Text(
-                    'No hay reservas para esta habitación',
-                    style: TextStyle(fontSize: 18, color: Color(0xFF555555)),
+                  Text(
+                    // Mensaje adaptado al rol del usuario
+                    _isAdmin
+                        ? (widget.room['id']?.isNotEmpty ?? false)
+                            ? 'No hay reservas para esta habitación'
+                            : 'No hay reservas registradas para el administrador'
+                        : 'No tienes reservas activas', 
+                    style: const TextStyle(fontSize: 18, color: Color(0xFF555555)),
                   ),
                 ],
               ),
@@ -264,8 +300,13 @@ void _showError(String message) {
               itemCount: reservations.length,
               itemBuilder: (context, index) {
                 final reservation = reservations[index];
-                final String userName =
-                    reservation['nombreUsuario'] ?? 'Usuario';
+                
+                // 🎯 USAMOS LAS NUEVAS CLAVES ADJUNTADAS POR FIREBASE SERVICE
+                final String userName = reservation['nombreUsuario'] ?? 'Usuario Desconocido';
+                final String roomName = reservation['nombreHabitacion'] ?? 'Habitación (N/A)';
+                // Si la imagen es URL, usamos 'imagenUrlHabitacion'
+                final String roomImageUrl = reservation['imagenUrlHabitacion'] ?? ''; 
+                
                 final String checkIn = reservation['fechaCheckIn'] ?? 'N/A';
                 final String checkOut = reservation['fechaCheckOut'] ?? 'N/A';
                 final String estado = reservation['estado'] ?? 'activa';
@@ -284,13 +325,34 @@ void _showError(String message) {
                   child: ListTile(
                     leading: CircleAvatar(
                       backgroundColor: _getStatusColor(estado),
-                      child: const Icon(
-                        Icons.receipt_long,
-                        color: Colors.white,
-                      ),
+                      child: roomImageUrl.isNotEmpty
+                          ? ClipOval(
+                              child: Image.network( // 🎯 USAMOS Image.network para URL
+                                roomImageUrl,
+                                fit: BoxFit.cover,
+                                width: 56.0, 
+                                height: 56.0,
+                                // Fallback si la imagen no carga
+                                errorBuilder: (context, error, stackTrace) {
+                                  return const Icon(
+                                    Icons.receipt_long,
+                                    color: Colors.white,
+                                  );
+                                },
+                              ),
+                            )
+                          : const Icon(
+                              Icons.receipt_long,
+                              color: Colors.white,
+                            ),
                     ),
                     title: Text(
-                      'Reserva de $userName',
+                      _isAdmin 
+                          ? 'Reserva: $userName - $roomName' 
+                          : 'Reserva para $roomName', 
+                      softWrap: true, 
+                      maxLines: 2,    
+                      overflow: TextOverflow.ellipsis, 
                       style: const TextStyle(fontWeight: FontWeight.bold),
                     ),
                     subtitle: Column(

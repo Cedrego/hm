@@ -1,5 +1,6 @@
 import 'dart:convert';
-import 'dart:io';
+import 'dart:io'; // Se mantiene, aunque ya no se usa para File en la selección de imágenes
+import 'dart:typed_data'; // Nuevo: Necesario para Uint8List
 import 'package:image_picker/image_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -31,7 +32,7 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
 
   // Imagen
   final ImagePicker _picker = ImagePicker();
-  File? _imagenFile;
+  Uint8List? _imagenBytes; // 🎯 Nuevo: Almacena los bytes de la imagen
   String? _imagenBase64;
 
   @override
@@ -57,9 +58,12 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
       );
 
       if (pickedFile != null) {
-        final bytes = await File(pickedFile.path).readAsBytes();
+        // 🎯 Corrección: Leer los bytes directamente del XFile.
+        // Esto es compatible con Web, Desktop, iOS y Android.
+        final bytes = await pickedFile.readAsBytes(); 
+        
         setState(() {
-          _imagenFile = File(pickedFile.path);
+          _imagenBytes = bytes;
           _imagenBase64 = base64Encode(bytes);
         });
 
@@ -73,7 +77,9 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Error al seleccionar imagen: $e'),
+            content: Text(
+              'Error al seleccionar imagen: ${e.toString().replaceAll('Unsupported operation: _Namespace', 'Operación no soportada en esta plataforma o permisos insuficientes.')}',
+            ),
             backgroundColor: Colors.red,
           ),
         );
@@ -216,10 +222,12 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
                         children: [
                           GestureDetector(
                             onTap: _seleccionarImagen,
-                            child: _imagenFile != null
+                            // 🎯 Uso de _imagenBytes para la vista previa
+                            child: _imagenBytes != null 
                                 ? CircleAvatar(
                                     radius: 28.h,
-                                    backgroundImage: FileImage(_imagenFile!),
+                                    // 🎯 Uso de MemoryImage para bytes en memoria
+                                    backgroundImage: MemoryImage(_imagenBytes!), 
                                   )
                                 : CircleAvatar(
                                     radius: 28.h,
@@ -442,7 +450,7 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
 
     // Limpiar imagen
     setState(() {
-      _imagenFile = null;
+      _imagenBytes = null; // 🎯 Limpieza de la nueva variable
       _imagenBase64 = null;
     });
 
