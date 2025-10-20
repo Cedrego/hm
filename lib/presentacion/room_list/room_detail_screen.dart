@@ -276,7 +276,6 @@ class _RoomDetailScreenState extends State<RoomDetailScreen> {
     );
   }
 
-  // ✅ MÉTODO ACTUALIZADO CON DISPONIBILIDAD
   Widget _buildNameAndPrice(String nombre, double precio, bool disponible) {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -334,7 +333,6 @@ class _RoomDetailScreenState extends State<RoomDetailScreen> {
     );
   }
 
-  // ✅ MÉTODO ACTUALIZADO CON DISPONIBILIDAD
   Widget _buildServicesChips(
     List<dynamic> serviciosAdicionales,
     bool disponible,
@@ -353,8 +351,7 @@ class _RoomDetailScreenState extends State<RoomDetailScreen> {
       }).toList(),
     );
   }
-
-  // ✅ MÉTODO ACTUALIZADO CON DISPONIBILIDAD
+  
   Widget _buildServiceChip(String servicio, bool disponible) {
     final servicioLower = servicio.toLowerCase();
     IconData icon;
@@ -403,7 +400,6 @@ class _RoomDetailScreenState extends State<RoomDetailScreen> {
     );
   }
 
-  // ✅ MÉTODO ACTUALIZADO CON DISPONIBILIDAD
   Widget _buildBottomButtonBar(
     BuildContext context,
     String idHabitacion,
@@ -428,7 +424,6 @@ class _RoomDetailScreenState extends State<RoomDetailScreen> {
         ),
         child: Row(
           children: [
-            // Botón Ver Reservas (Solo para Admin)
             if (_isAdmin)
               Expanded(
                 child: ElevatedButton.icon(
@@ -454,45 +449,42 @@ class _RoomDetailScreenState extends State<RoomDetailScreen> {
                   ),
                 ),
               ),
-
-            if (_isAdmin) const SizedBox(width: 12),
-
-            // Botón Reservar Ahora (Solo si está disponible)
-            Expanded(
-              child: ElevatedButton.icon(
-                onPressed: disponible
-                    ? () {
-                        Navigator.pushNamed(
-                          context,
-                          AppRoutes.reservationFormScreen,
-                          arguments: room,
-                        );
-                      }
-                    : null, // ← DESHABILITAR SI NO ESTÁ DISPONIBLE
-                icon: Icon(
-                  Icons.calendar_month,
-                  color: disponible ? Colors.white : Colors.grey,
-                ),
-                label: Text(
-                  disponible ? 'Reservar Ahora' : 'No Disponible',
-                  style: TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
+            if (!_isAdmin)
+              Expanded(
+                child: ElevatedButton.icon(
+                  onPressed: disponible
+                      ? () {
+                          Navigator.pushNamed(
+                            context,
+                            AppRoutes.reservationFormScreen,
+                            arguments: room,
+                          );
+                        }
+                      : null,
+                  icon: Icon(
+                    Icons.calendar_month,
                     color: disponible ? Colors.white : Colors.grey,
                   ),
-                ),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: disponible
-                      ? Color(0xFF00897B)
-                      : Colors.grey.shade300,
-                  foregroundColor: Colors.white,
-                  padding: const EdgeInsets.symmetric(vertical: 14),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(8),
+                  label: Text(
+                    disponible ? 'Reservar Ahora' : 'No Disponible',
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                      color: disponible ? Colors.white : Colors.grey,
+                    ),
+                  ),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: disponible
+                        ? Color(0xFF00897B)
+                        : Colors.grey.shade300,
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(vertical: 14),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(8),
+                    ),
                   ),
                 ),
               ),
-            ),
           ],
         ),
       ),
