@@ -124,6 +124,7 @@ class AppDrawer extends StatelessWidget {
                 Navigator.pushNamed(context, AppRoutes.roomCreationScreen);
               },
             ),
+          if (!isAdmin)
           ListTile(
             leading: const Icon(Icons.calendar_today),
             title: const Text('Mis Reservas'),

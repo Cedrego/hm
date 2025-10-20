@@ -209,7 +209,7 @@ class _RoomCreationScreenState extends State<RoomCreationScreen> {
 
       appBar: CustomAppBar(
         scaffoldKey: _scaffoldKey,
-        onLogoutPressed: () => _onLogoutPressed,
+        onLogoutPressed: _onLogoutPressed,
         userData: _userData,
         isAdmin: _isAdmin,
       ),
@@ -217,7 +217,7 @@ class _RoomCreationScreenState extends State<RoomCreationScreen> {
       drawer: AppDrawer(
         userData: _userData,
         isAdmin: _isAdmin,
-        onLogoutPressed: () => _onLogoutPressed,
+        onLogoutPressed: _onLogoutPressed,
       ),
 
       body: SingleChildScrollView(

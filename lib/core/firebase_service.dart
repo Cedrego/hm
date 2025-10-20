@@ -267,6 +267,52 @@ class FirebaseService {
         );
   }
 
+  // Buscar habitaciones por nombre o servicios
+  Stream<List<Map<String, dynamic>>> buscarHabitaciones(String query) {
+    _checkInitialization();
+
+    if (query.isEmpty) {
+      // Si la búsqueda está vacía, retornar todas las habitaciones
+      return getHabitaciones();
+    }
+
+    final queryLower = query.toLowerCase();
+
+    return _firestore
+        .collection('habitaciones')
+        .snapshots()
+        .map(
+          (snapshot) => snapshot.docs.map((doc) {
+            final data = doc.data();
+            return {
+              'id': doc.id,
+              'nombre': data['nombre'] ?? '',
+              'descripcion': data['descripcion'] ?? '',
+              'precio': (data['precio'] ?? 0.0).toDouble(),
+              'servicios': List<String>.from(data['servicios'] ?? []),
+              'imagenUrl': data['imagenUrl'],
+              'disponible': data['disponible'] ?? true,
+            };
+          }).toList(),
+        )
+        .map(
+          (habitaciones) => habitaciones.where((habitacion) {
+            final nombre = habitacion['nombre']?.toString().toLowerCase() ?? '';
+            final servicios = List<String>.from(habitacion['servicios'] ?? []);
+
+            // Buscar en el nombre
+            final coincideNombre = nombre.contains(queryLower);
+
+            // Buscar en los servicios
+            final coincideServicios = servicios.any(
+              (servicio) => servicio.toLowerCase().contains(queryLower),
+            );
+
+            return coincideNombre || coincideServicios;
+          }).toList(),
+        );
+  }
+
   // =========================================================================
   // 📅 RESERVAS
   // =========================================================================
@@ -573,6 +619,33 @@ class FirebaseService {
     } catch (e) {
       AppLogger.e('❌ Error verificando disponibilidad: $e');
       return false;
+    }
+  }
+
+
+  // Obtener imagen URL de habitación por ID
+  Future<String?> getHabitacionImg(String habitacionId) async {
+    _checkInitialization(); // ✅ VERIFICAR INICIALIZACIÓN
+    
+    try {
+      final doc = await _firestore
+          .collection('habitaciones')
+          .doc(habitacionId)
+          .get();
+          
+      if (doc.exists) {
+        final data = doc.data();
+        // Retorna el valor del campo 'imagenUrl'. Si es null, retorna null.
+        return data?['imagenUrl'] as String?;
+      }
+      
+      // Retorna null si el documento no existe
+      return null;
+    } catch (e) {
+      AppLogger.e('Error obteniendo habitación $habitacionId: $e');
+      // En caso de error, retorna null o relanza una excepción, dependiendo de tu manejo de errores.
+      // Aquí elegimos retornar null para consistencia.
+      return null; 
     }
   }
 }
