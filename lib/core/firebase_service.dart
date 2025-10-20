@@ -486,4 +486,31 @@ class FirebaseService {
       throw Exception('Error al cargar datos de la habitación');
     }
   }
+
+
+  // Obtener imagen URL de habitación por ID
+  Future<String?> getHabitacionImg(String habitacionId) async {
+    _checkInitialization(); // ✅ VERIFICAR INICIALIZACIÓN
+    
+    try {
+      final doc = await _firestore
+          .collection('habitaciones')
+          .doc(habitacionId)
+          .get();
+          
+      if (doc.exists) {
+        final data = doc.data();
+        // Retorna el valor del campo 'imagenUrl'. Si es null, retorna null.
+        return data?['imagenUrl'] as String?;
+      }
+      
+      // Retorna null si el documento no existe
+      return null;
+    } catch (e) {
+      AppLogger.e('Error obteniendo habitación $habitacionId: $e');
+      // En caso de error, retorna null o relanza una excepción, dependiendo de tu manejo de errores.
+      // Aquí elegimos retornar null para consistencia.
+      return null; 
+    }
+  }
 }
