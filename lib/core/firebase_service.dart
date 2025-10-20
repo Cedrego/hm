@@ -267,6 +267,52 @@ class FirebaseService {
         );
   }
 
+  // Buscar habitaciones por nombre o servicios
+  Stream<List<Map<String, dynamic>>> buscarHabitaciones(String query) {
+    _checkInitialization();
+
+    if (query.isEmpty) {
+      // Si la búsqueda está vacía, retornar todas las habitaciones
+      return getHabitaciones();
+    }
+
+    final queryLower = query.toLowerCase();
+
+    return _firestore
+        .collection('habitaciones')
+        .snapshots()
+        .map(
+          (snapshot) => snapshot.docs.map((doc) {
+            final data = doc.data();
+            return {
+              'id': doc.id,
+              'nombre': data['nombre'] ?? '',
+              'descripcion': data['descripcion'] ?? '',
+              'precio': (data['precio'] ?? 0.0).toDouble(),
+              'servicios': List<String>.from(data['servicios'] ?? []),
+              'imagenUrl': data['imagenUrl'],
+              'disponible': data['disponible'] ?? true,
+            };
+          }).toList(),
+        )
+        .map(
+          (habitaciones) => habitaciones.where((habitacion) {
+            final nombre = habitacion['nombre']?.toString().toLowerCase() ?? '';
+            final servicios = List<String>.from(habitacion['servicios'] ?? []);
+
+            // Buscar en el nombre
+            final coincideNombre = nombre.contains(queryLower);
+
+            // Buscar en los servicios
+            final coincideServicios = servicios.any(
+              (servicio) => servicio.toLowerCase().contains(queryLower),
+            );
+
+            return coincideNombre || coincideServicios;
+          }).toList(),
+        );
+  }
+
   // =========================================================================
   // 📅 RESERVAS
   // =========================================================================
