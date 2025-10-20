@@ -22,14 +22,25 @@ class _RoomListScreenState extends State<RoomListScreen> {
   bool get _isAdmin => _userData?['rol'] == 'admin';
 
   List<Map<String, dynamic>> habitaciones = [];
+  List<Map<String, dynamic>> habitacionesFiltradas = [];
   bool isLoading = true;
   String errorMessage = '';
+
+  // Controlador para el campo de búsqueda
+  final TextEditingController _searchController = TextEditingController();
+  String _searchQuery = '';
 
   @override
   void initState() {
     super.initState();
     _loadUserData();
     _cargarHabitaciones();
+  }
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
   }
 
   Future<void> _loadUserData() async {
@@ -61,6 +72,7 @@ class _RoomListScreenState extends State<RoomListScreen> {
           if (mounted) {
             setState(() {
               habitaciones = listaHabitaciones;
+              _aplicarFiltroBusqueda();
               isLoading = false;
             });
           }
@@ -82,6 +94,48 @@ class _RoomListScreenState extends State<RoomListScreen> {
         });
       }
     }
+  }
+
+  void _aplicarFiltroBusqueda() {
+    if (_searchQuery.isEmpty) {
+      setState(() {
+        habitacionesFiltradas = List.from(habitaciones);
+      });
+      return;
+    }
+
+    final query = _searchQuery.toLowerCase();
+    setState(() {
+      habitacionesFiltradas = habitaciones.where((habitacion) {
+        final nombre = habitacion['nombre']?.toString().toLowerCase() ?? '';
+        final servicios = List<String>.from(habitacion['servicios'] ?? []);
+
+        // Buscar en el nombre
+        final coincideNombre = nombre.contains(query);
+
+        // Buscar en los servicios
+        final coincideServicios = servicios.any(
+          (servicio) => servicio.toLowerCase().contains(query),
+        );
+
+        return coincideNombre || coincideServicios;
+      }).toList();
+    });
+  }
+
+  void _onSearchChanged(String query) {
+    setState(() {
+      _searchQuery = query;
+    });
+    _aplicarFiltroBusqueda();
+  }
+
+  void _clearSearch() {
+    setState(() {
+      _searchController.clear();
+      _searchQuery = '';
+    });
+    _aplicarFiltroBusqueda();
   }
 
   Future<void> _onLogoutPressed() async {
@@ -145,95 +199,172 @@ class _RoomListScreenState extends State<RoomListScreen> {
       body: RefreshIndicator(
         onRefresh: _cargarHabitaciones,
         color: const Color(0xFF00897B),
-        child: isLoading
-            ? const Center(
-                child: CircularProgressIndicator(color: Color(0xFF00897B)),
-              )
-            : errorMessage.isNotEmpty
-            ? Center(
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    const Icon(
-                      Icons.error_outline,
-                      size: 64,
-                      color: Colors.red,
-                    ),
-                    const SizedBox(height: 16),
-                    Text(
-                      'Error al cargar habitaciones',
-                      style: TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.grey[700],
+        child: Column(
+          children: [
+            // Barra de búsqueda
+            _buildSearchBar(),
+
+            // Lista de habitaciones
+            Expanded(
+              child: isLoading
+                  ? const Center(
+                      child: CircularProgressIndicator(
+                        color: Color(0xFF00897B),
                       ),
-                    ),
-                    const SizedBox(height: 8),
-                    Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 32),
-                      child: Text(
-                        errorMessage,
-                        textAlign: TextAlign.center,
-                        style: TextStyle(fontSize: 14, color: Colors.grey[600]),
+                    )
+                  : errorMessage.isNotEmpty
+                  ? Center(
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          const Icon(
+                            Icons.error_outline,
+                            size: 64,
+                            color: Colors.red,
+                          ),
+                          const SizedBox(height: 16),
+                          Text(
+                            'Error al cargar habitaciones',
+                            style: TextStyle(
+                              fontSize: 18,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.grey[700],
+                            ),
+                          ),
+                          const SizedBox(height: 8),
+                          Padding(
+                            padding: const EdgeInsets.symmetric(horizontal: 32),
+                            child: Text(
+                              errorMessage,
+                              textAlign: TextAlign.center,
+                              style: TextStyle(
+                                fontSize: 14,
+                                color: Colors.grey[600],
+                              ),
+                            ),
+                          ),
+                          const SizedBox(height: 24),
+                          ElevatedButton.icon(
+                            onPressed: _cargarHabitaciones,
+                            icon: const Icon(Icons.refresh),
+                            label: const Text('Reintentar'),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: const Color(0xFF00897B),
+                              foregroundColor: Colors.white,
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 24,
+                                vertical: 12,
+                              ),
+                            ),
+                          ),
+                        ],
                       ),
-                    ),
-                    const SizedBox(height: 24),
-                    ElevatedButton.icon(
-                      onPressed: _cargarHabitaciones,
-                      icon: const Icon(Icons.refresh),
-                      label: const Text('Reintentar'),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFF00897B),
-                        foregroundColor: Colors.white,
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 24,
-                          vertical: 12,
-                        ),
+                    )
+                  : habitacionesFiltradas.isEmpty
+                  ? Center(
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(
+                            Icons.search_off,
+                            size: 80,
+                            color: Colors.grey[400],
+                          ),
+                          const SizedBox(height: 16),
+                          Text(
+                            _searchQuery.isEmpty
+                                ? 'No hay habitaciones disponibles'
+                                : 'No se encontraron resultados',
+                            style: TextStyle(
+                              fontSize: 18,
+                              color: Colors.grey[600],
+                            ),
+                          ),
+                          if (_searchQuery.isNotEmpty) ...[
+                            const SizedBox(height: 8),
+                            Text(
+                              'Búsqueda: "$_searchQuery"',
+                              style: TextStyle(
+                                fontSize: 14,
+                                color: Colors.grey[500],
+                              ),
+                            ),
+                            const SizedBox(height: 16),
+                            OutlinedButton(
+                              onPressed: _clearSearch,
+                              child: const Text('Limpiar búsqueda'),
+                            ),
+                          ],
+                          const SizedBox(height: 24),
+                          ElevatedButton.icon(
+                            onPressed: _cargarHabitaciones,
+                            icon: const Icon(Icons.refresh),
+                            label: const Text('Actualizar'),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: const Color(0xFF00897B),
+                              foregroundColor: Colors.white,
+                            ),
+                          ),
+                        ],
                       ),
+                    )
+                  : ListView.builder(
+                      padding: const EdgeInsets.symmetric(vertical: 8),
+                      itemCount: habitacionesFiltradas.length,
+                      itemBuilder: (context, index) {
+                        return _buildRoomListItem(habitacionesFiltradas[index]);
+                      },
                     ),
-                  ],
-                ),
-              )
-            : habitaciones.isEmpty
-            ? Center(
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Icon(
-                      Icons.hotel_outlined,
-                      size: 80,
-                      color: Colors.grey[400],
-                    ),
-                    const SizedBox(height: 16),
-                    Text(
-                      'No hay habitaciones disponibles',
-                      style: TextStyle(fontSize: 18, color: Colors.grey[600]),
-                    ),
-                    const SizedBox(height: 24),
-                    ElevatedButton.icon(
-                      onPressed: _cargarHabitaciones,
-                      icon: const Icon(Icons.refresh),
-                      label: const Text('Actualizar'),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFF00897B),
-                        foregroundColor: Colors.white,
-                      ),
-                    ),
-                  ],
-                ),
-              )
-            : ListView.builder(
-                padding: const EdgeInsets.symmetric(vertical: 8),
-                itemCount: habitaciones.length,
-                itemBuilder: (context, index) {
-                  return _buildRoomListItem(habitaciones[index]);
-                },
-              ),
+            ),
+          ],
+        ),
       ),
       floatingActionButton: FloatingActionButton(
         onPressed: _cargarHabitaciones,
         backgroundColor: const Color(0xFF00897B),
         child: const Icon(Icons.refresh, color: Colors.white),
+      ),
+    );
+  }
+
+  Widget _buildSearchBar() {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        boxShadow: [
+          BoxShadow(
+            color: Colors.grey.shade200,
+            blurRadius: 4,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: TextField(
+        controller: _searchController,
+        onChanged: _onSearchChanged,
+        decoration: InputDecoration(
+          hintText: 'Buscar habitaciones por nombre o servicios...',
+          prefixIcon: const Icon(Icons.search, color: Color(0xFF00897B)),
+          suffixIcon: _searchQuery.isNotEmpty
+              ? IconButton(
+                  icon: const Icon(Icons.clear, color: Colors.grey),
+                  onPressed: _clearSearch,
+                )
+              : null,
+          border: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(12),
+            borderSide: BorderSide(color: Colors.grey.shade300),
+          ),
+          focusedBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(12),
+            borderSide: const BorderSide(color: Color(0xFF00897B), width: 2),
+          ),
+          contentPadding: const EdgeInsets.symmetric(
+            horizontal: 16,
+            vertical: 12,
+          ),
+        ),
       ),
     );
   }
