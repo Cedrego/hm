@@ -3,6 +3,8 @@ import 'package:intl/intl.dart';
 import '../../core/firebase_service.dart';
 import '../../core/auth_service.dart';
 import '../../core/app_export.dart';
+import '../../widgets/custom_calendar_picker.dart';
+import '../../core/logger.dart';
 
 class ReservationFormScreen extends StatefulWidget {
   final Map<String, dynamic> room;
@@ -17,8 +19,10 @@ class _ReservationFormScreenState extends State<ReservationFormScreen> {
   DateTime? checkInDate;
   DateTime? checkOutDate;
   bool isLoading = false;
+  bool isLoadingAvailability = true;
   String? _errorMessage;
   Map<String, dynamic>? _userData;
+  List<Map<String, DateTime>> _fechasOcupadas = [];
   final FirebaseService _firebaseService = FirebaseService.instance;
   final currencyFormatter = NumberFormat.currency(
     locale: 'es_ES',
@@ -43,6 +47,7 @@ class _ReservationFormScreenState extends State<ReservationFormScreen> {
   void initState() {
     super.initState();
     _loadUserData();
+    _loadFechasOcupadas();
   }
 
   Future<void> _loadUserData() async {
@@ -57,46 +62,74 @@ class _ReservationFormScreenState extends State<ReservationFormScreen> {
     }
   }
 
-  Future<void> _selectDate(BuildContext context, bool isCheckIn) async {
-    final DateTime? picked = await showDatePicker(
-      context: context,
-      initialDate: isCheckIn
-          ? (checkInDate ?? DateTime.now())
-          : (checkOutDate ??
-                (checkInDate ?? DateTime.now()).add(const Duration(days: 1))),
-      firstDate: DateTime.now(),
-      lastDate: DateTime.now().add(const Duration(days: 365)),
-      selectableDayPredicate: (DateTime date) {
-        if (!isCheckIn && checkInDate != null && date.isBefore(checkInDate!)) {
-          return false;
-        }
-        return true;
-      },
-      builder: (context, child) {
-        return Theme(
-          data: Theme.of(context).copyWith(
-            colorScheme: const ColorScheme.light(primary: Color(0xFF00897B)),
-          ),
-          child: child!,
-        );
-      },
-    );
-
-    if (picked != null) {
+  Future<void> _loadFechasOcupadas() async {
+    try {
       setState(() {
-        _errorMessage = null;
-        if (isCheckIn) {
-          checkInDate = picked;
-          if (checkOutDate != null &&
-              (checkOutDate!.isBefore(picked) ||
-                  checkOutDate!.isAtSameMomentAs(picked))) {
-            checkOutDate = null;
-          }
-        } else {
-          checkOutDate = picked;
-        }
+        isLoadingAvailability = true;
+      });
+
+      final fechas = await _firebaseService.getFechasOcupadasHabitacion(_roomId);
+
+      if (!mounted) return;
+
+      setState(() {
+        _fechasOcupadas = fechas;
+        isLoadingAvailability = false;
+      });
+
+      AppLogger.success(
+        '✅ Cargadas ${fechas.length} reservas activas para la habitación',
+      );
+    } catch (e) {
+      AppLogger.e('❌ Error cargando disponibilidad: $e');
+      if (!mounted) return;
+      setState(() {
+        isLoadingAvailability = false;
+        _errorMessage = 'Error al cargar disponibilidad de la habitación';
       });
     }
+  }
+
+  Future<void> _selectDate(BuildContext context, bool isCheckIn) async {
+    if (isLoadingAvailability) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('⏳ Cargando disponibilidad...'),
+          duration: Duration(seconds: 2),
+        ),
+      );
+      return;
+    }
+
+    await showDialog(
+      context: context,
+      builder: (context) => CustomCalendarPicker(
+        initialDate: isCheckIn
+            ? (checkInDate ?? DateTime.now())
+            : (checkOutDate ?? (checkInDate ?? DateTime.now()).add(const Duration(days: 1))),
+        firstDate: DateTime.now(),
+        lastDate: DateTime.now().add(const Duration(days: 365)),
+        fechasOcupadas: _fechasOcupadas,
+        isCheckInPicker: isCheckIn,
+        checkInDate: isCheckIn ? null : checkInDate,
+        onDateSelected: (date) {
+          setState(() {
+            _errorMessage = null;
+            if (isCheckIn) {
+              checkInDate = date;
+              // Si el checkOut está antes del nuevo checkIn, lo reseteamos
+              if (checkOutDate != null &&
+                  (checkOutDate!.isBefore(date) ||
+                      checkOutDate!.isAtSameMomentAs(date))) {
+                checkOutDate = null;
+              }
+            } else {
+              checkOutDate = date;
+            }
+          });
+        },
+      ),
+    );
   }
 
   Future<void> _confirmReservation() async {
@@ -121,6 +154,25 @@ class _ReservationFormScreenState extends State<ReservationFormScreen> {
     });
 
     try {
+      // ✅ VERIFICAR DISPONIBILIDAD ANTES DE CREAR LA RESERVA
+      final disponible = await _firebaseService.verificarDisponibilidad(
+        habitacionId: _roomId,
+        checkIn: checkInDate!,
+        checkOut: checkOutDate!,
+      );
+
+      if (!disponible) {
+        if (!mounted) return;
+        setState(() {
+          _errorMessage =
+              'Las fechas seleccionadas ya no están disponibles. Por favor, seleccione otras fechas.';
+          isLoading = false;
+        });
+        // Recargar las fechas ocupadas
+        await _loadFechasOcupadas();
+        return;
+      }
+
       final idUsuario = _userData!['id'];
 
       await _firebaseService.crearReserva(
@@ -181,11 +233,15 @@ class _ReservationFormScreenState extends State<ReservationFormScreen> {
         ),
         const SizedBox(height: 8),
         GestureDetector(
-          onTap: () => _selectDate(context, isCheckIn),
+          onTap: isLoadingAvailability
+              ? null
+              : () => _selectDate(context, isCheckIn),
           child: Container(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
             decoration: BoxDecoration(
-              color: Colors.white,
+              color: isLoadingAvailability
+                  ? Colors.grey.shade100
+                  : Colors.white,
               borderRadius: BorderRadius.circular(8),
               border: Border.all(color: Colors.grey.shade300),
             ),
@@ -194,22 +250,37 @@ class _ReservationFormScreenState extends State<ReservationFormScreen> {
               children: [
                 Expanded(
                   child: Text(
-                    date == null
-                        ? 'Seleccionar fecha'
-                        : DateFormat('dd/MM/yyyy').format(date),
+                    isLoadingAvailability
+                        ? 'Cargando...'
+                        : (date == null
+                            ? 'Seleccionar fecha'
+                            : DateFormat('dd/MM/yyyy').format(date)),
                     style: TextStyle(
                       fontSize: 16,
-                      color: date == null ? Colors.grey.shade600 : Colors.black,
+                      color: isLoadingAvailability || date == null
+                          ? Colors.grey.shade600
+                          : Colors.black,
                     ),
                     overflow: TextOverflow.ellipsis,
                   ),
                 ),
                 const SizedBox(width: 8),
-                Icon(
-                  Icons.calendar_today,
-                  color: Colors.grey.shade600,
-                  size: 20,
-                ),
+                isLoadingAvailability
+                    ? SizedBox(
+                        width: 20,
+                        height: 20,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          valueColor: AlwaysStoppedAnimation<Color>(
+                            Colors.grey.shade600,
+                          ),
+                        ),
+                      )
+                    : Icon(
+                        Icons.calendar_today,
+                        color: Colors.grey.shade600,
+                        size: 20,
+                      ),
               ],
             ),
           ),
@@ -242,6 +313,37 @@ class _ReservationFormScreenState extends State<ReservationFormScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
+                // 📅 INFORMACIÓN DE DISPONIBILIDAD
+                if (!isLoadingAvailability && _fechasOcupadas.isNotEmpty)
+                  Container(
+                    margin: const EdgeInsets.only(bottom: 16),
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: Colors.blue.shade50,
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(color: Colors.blue.shade200),
+                    ),
+                    child: Row(
+                      children: [
+                        Icon(
+                          Icons.info_outline,
+                          color: Colors.blue.shade700,
+                          size: 20,
+                        ),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            'Esta habitación tiene ${_fechasOcupadas.length} reserva(s) activa(s). Los días ocupados se mostrarán en rojo.',
+                            style: TextStyle(
+                              fontSize: 13,
+                              color: Colors.blue.shade700,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+
                 Card(
                   elevation: 2,
                   shape: RoundedRectangleBorder(
@@ -330,11 +432,31 @@ class _ReservationFormScreenState extends State<ReservationFormScreen> {
                 if (_errorMessage != null)
                   Padding(
                     padding: const EdgeInsets.only(bottom: 16),
-                    child: Text(
-                      '❌ Error: $_errorMessage',
-                      style: const TextStyle(
-                        color: Colors.red,
-                        fontWeight: FontWeight.bold,
+                    child: Container(
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: Colors.red.shade50,
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(color: Colors.red.shade200),
+                      ),
+                      child: Row(
+                        children: [
+                          Icon(
+                            Icons.error_outline,
+                            color: Colors.red.shade700,
+                            size: 20,
+                          ),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Text(
+                              _errorMessage!,
+                              style: TextStyle(
+                                color: Colors.red.shade700,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ),
+                        ],
                       ),
                     ),
                   ),

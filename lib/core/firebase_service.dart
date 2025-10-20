@@ -486,4 +486,93 @@ class FirebaseService {
       throw Exception('Error al cargar datos de la habitación');
     }
   }
+
+  // =========================================================================
+  // 📅 OBTENER FECHAS OCUPADAS DE UNA HABITACIÓN
+  // =========================================================================
+
+  /// Obtiene todos los rangos de fechas ocupadas para una habitación específica
+  /// Retorna una lista de Maps con 'checkIn' y 'checkOut'
+  Future<List<Map<String, DateTime>>> getFechasOcupadasHabitacion(
+    String habitacionId,
+  ) async {
+    _checkInitialization();
+
+    try {
+      AppLogger.i('🔍 Consultando fechas ocupadas para habitación: $habitacionId');
+
+      final querySnapshot = await _firestore
+          .collection('reservas')
+          .where('idHabitacion', isEqualTo: habitacionId)
+          .where('estado', isEqualTo: 'activa')
+          .get();
+
+      final List<Map<String, DateTime>> fechasOcupadas = [];
+
+      for (final doc in querySnapshot.docs) {
+        final data = doc.data();
+        final checkInStr = data['fechaCheckIn'] as String?;
+        final checkOutStr = data['fechaCheckOut'] as String?;
+
+        if (checkInStr != null && checkOutStr != null) {
+          try {
+            final checkIn = DateTime.parse(checkInStr);
+            final checkOut = DateTime.parse(checkOutStr);
+
+            fechasOcupadas.add({
+              'checkIn': checkIn,
+              'checkOut': checkOut,
+            });
+          } catch (e) {
+            AppLogger.w('⚠️ Error parseando fechas de reserva ${doc.id}: $e');
+          }
+        }
+      }
+
+      AppLogger.success(
+        '✅ Se encontraron ${fechasOcupadas.length} reservas activas para la habitación',
+      );
+
+      return fechasOcupadas;
+    } catch (e) {
+      AppLogger.e('❌ Error obteniendo fechas ocupadas: $e');
+      throw Exception('Error al cargar disponibilidad: $e');
+    }
+  }
+
+  /// Verifica si un rango de fechas está disponible para una habitación
+  Future<bool> verificarDisponibilidad({
+    required String habitacionId,
+    required DateTime checkIn,
+    required DateTime checkOut,
+  }) async {
+    try {
+      final fechasOcupadas = await getFechasOcupadasHabitacion(habitacionId);
+
+      // Verificar si hay conflicto con alguna reserva existente
+      for (final reserva in fechasOcupadas) {
+        final reservaCheckIn = reserva['checkIn']!;
+        final reservaCheckOut = reserva['checkOut']!;
+
+        // Hay conflicto si:
+        // 1. El checkIn solicitado está dentro de una reserva existente
+        // 2. El checkOut solicitado está dentro de una reserva existente
+        // 3. La reserva solicitada engloba completamente una reserva existente
+        final hayConflicto = (checkIn.isBefore(reservaCheckOut) &&
+                checkOut.isAfter(reservaCheckIn));
+
+        if (hayConflicto) {
+          AppLogger.w(
+            '⚠️ Conflicto encontrado: $checkIn - $checkOut se solapa con $reservaCheckIn - $reservaCheckOut',
+          );
+          return false;
+        }
+      }
+
+      return true;
+    } catch (e) {
+      AppLogger.e('❌ Error verificando disponibilidad: $e');
+      return false;
+    }
+  }
 }
