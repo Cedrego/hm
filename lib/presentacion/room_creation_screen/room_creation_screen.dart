@@ -1,5 +1,7 @@
 import 'dart:convert';
 import 'dart:io';
+
+import 'package:flutter/services.dart';
 // Necesario para verificar si estamos en la web
 import 'package:flutter/foundation.dart'; 
 import 'package:image_picker/image_picker.dart';
@@ -424,12 +426,22 @@ class _RoomCreationScreenState extends State<RoomCreationScreen> {
   Widget _buildPriceInput() {
     return Row(
       children: [
-        // Input editable
         SizedBox(
           width: 150,
           child: TextField(
             controller: _precioController,
             keyboardType: const TextInputType.numberWithOptions(decimal: true),
+            inputFormatters: [
+              // ✅ Solo permite números y un punto decimal (máximo 2 decimales)
+              FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d{0,2}')),
+              // ✅ Evita que empiece con punto
+              TextInputFormatter.withFunction((oldValue, newValue) {
+                if (newValue.text.startsWith('.')) {
+                  return oldValue;
+                }
+                return newValue;
+              }),
+            ],
             decoration: InputDecoration(
               prefixText: 'USD ',
               contentPadding: const EdgeInsets.symmetric(
@@ -452,6 +464,7 @@ class _RoomCreationScreenState extends State<RoomCreationScreen> {
       ],
     );
   }
+
 
   // ignore: unused_element
   Widget _buildArrowButton(IconData icon, VoidCallback onPressed) {

@@ -324,18 +324,7 @@ class _ReservaDetalleScreenState extends State<ReservaDetalleScreen> {
                                     ),
                                   ),
                                 ],
-                              ),
-                              const SizedBox(height: 4),
-                              if (servicios.isNotEmpty)
-                                Text(
-                                  servicios.take(3).join(', '),
-                                  style: TextStyle(
-                                    fontSize: 14,
-                                    color: Colors.grey[600],
-                                  ),
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
-                                ),
+                              ),                              
                               const SizedBox(height: 12),
                               Text(
                                 descripcion,

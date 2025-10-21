@@ -36,7 +36,26 @@ class _ReservationFormScreenState extends State<ReservationFormScreen> {
 
   int get _durationInDays {
     if (checkInDate != null && checkOutDate != null) {
-      return checkOutDate!.difference(checkInDate!).inDays;
+      // ✅ NORMALIZAR CON HORARIOS ESPECÍFICOS
+      // Check-in: 12:00 PM (mediodía)
+      final checkInNormalized = DateTime(
+        checkInDate!.year, 
+        checkInDate!.month, 
+        checkInDate!.day,
+        12, // 14:00 PM
+        0,
+        0,
+      );
+      // Check-out: 2:00 PM (14:00)
+      final checkOutNormalized = DateTime(
+        checkOutDate!.year, 
+        checkOutDate!.month, 
+        checkOutDate!.day,
+        14, // 2:00 PM
+        0,
+        0,
+      );
+      return checkOutNormalized.difference(checkInNormalized).inDays;
     }
     return 0;
   }

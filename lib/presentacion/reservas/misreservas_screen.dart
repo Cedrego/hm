@@ -268,7 +268,6 @@ class _MisReservasScreenState extends State<MisReservasScreen> {
     );
   }
 
-  // AGREGAR ESTE MÉTODO PARA OBTENER DATOS DE LA HABITACIÓN
   Future<Map<String, dynamic>?> _obtenerDatosHabitacion(
     String habitacionId,
   ) async {
@@ -281,7 +280,26 @@ class _MisReservasScreenState extends State<MisReservasScreen> {
     }
   }
 
-  // ACTUALIZAR EL MÉTODO _buildReservaCard
+  // MÉTODO PARA OBTENER ICONO DEL SERVICIO
+  IconData _getServicioIcon(String servicio) {
+    final servicioLower = servicio.toLowerCase();
+    if (servicioLower.contains('wifi')) return Icons.wifi;
+    if (servicioLower.contains('aire') || servicioLower.contains('ac')) {
+      return Icons.ac_unit;
+    }
+    if (servicioLower.contains('tv')) return Icons.tv;
+    if (servicioLower.contains('desayuno')) return Icons.free_breakfast;
+    if (servicioLower.contains('piscina')) return Icons.pool;
+    if (servicioLower.contains('estacionamiento') || servicioLower.contains('parking')) {
+      return Icons.local_parking;
+    }
+    if (servicioLower.contains('gimnasio')) return Icons.fitness_center;
+    if (servicioLower.contains('spa')) return Icons.spa;
+    if (servicioLower.contains('bar')) return Icons.local_bar;
+    if (servicioLower.contains('restaurante')) return Icons.restaurant;
+    return Icons.check_circle_outline;
+  }
+
   Widget _buildReservaCard(Map<String, dynamic> reserva) {
     final String habitacionId = reserva['idHabitacion'] ?? '';
     final String estado = reserva['estado'] ?? 'activa';
@@ -291,9 +309,9 @@ class _MisReservasScreenState extends State<MisReservasScreen> {
     return FutureBuilder<Map<String, dynamic>?>(
       future: _obtenerDatosHabitacion(habitacionId),
       builder: (context, snapshot) {
-        // Datos de la habitación
         final String nombreHab = snapshot.data?['nombre'] ?? 'Cargando...';
         final String imagenUrl = snapshot.data?['imagenUrl'] ?? '';
+        final List<dynamic> servicios = snapshot.data?['servicios'] ?? [];
         final bool isLoadingHabitacion =
             snapshot.connectionState == ConnectionState.waiting;
 
@@ -306,7 +324,7 @@ class _MisReservasScreenState extends State<MisReservasScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // SECCIÓN DE IMAGEN ACTUALIZADA
+              // SECCIÓN DE IMAGEN
               Container(
                 height: 160,
                 decoration: BoxDecoration(
@@ -318,7 +336,6 @@ class _MisReservasScreenState extends State<MisReservasScreen> {
                 ),
                 child: Stack(
                   children: [
-                    // IMAGEN DE LA HABITACIÓN O PLACEHOLDER
                     if (imagenUrl.isNotEmpty && !isLoadingHabitacion)
                       CachedNetworkImage(
                         imageUrl: imagenUrl,
@@ -383,30 +400,126 @@ class _MisReservasScreenState extends State<MisReservasScreen> {
                         color: Colors.black87,
                       ),
                     ),
-                    const SizedBox(height: 8),
+                    const SizedBox(height: 12),
 
-                    // ID DE RESERVA
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 10,
-                        vertical: 4,
-                      ),
-                      decoration: BoxDecoration(
-                        color: const Color(0xFF00897B).withAlpha(26),
-                        borderRadius: BorderRadius.circular(12),
-                        border: Border.all(
-                          color: const Color(0xFF00897B).withAlpha(76),
+                    // SERVICIOS DE LA HABITACIÓN
+                    if (servicios.isNotEmpty && !isLoadingHabitacion)
+                      Container(
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFF00897B).withAlpha(13),
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(
+                            color: const Color(0xFF00897B).withAlpha(51),
+                            width: 1,
+                          ),
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
+                              children: [
+                                Icon(
+                                  Icons.room_service,
+                                  size: 16,
+                                  color: Color(0xFF00897B),
+                                ),
+                                const SizedBox(width: 6),
+                                Text(
+                                  'Servicios incluidos',
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.w600,
+                                    color: Color(0xFF00897B),
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 8),
+                            Wrap(
+                              spacing: 8,
+                              runSpacing: 6,
+                              children: servicios.take(4).map((servicio) {
+                                return Container(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 8,
+                                    vertical: 4,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    color: Colors.white,
+                                    borderRadius: BorderRadius.circular(8),
+                                    border: Border.all(
+                                      color: const Color(0xFF00897B).withAlpha(76),
+                                    ),
+                                  ),
+                                  child: Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      Icon(
+                                        _getServicioIcon(servicio.toString()),
+                                        size: 14,
+                                        color: Color(0xFF00897B),
+                                      ),
+                                      const SizedBox(width: 4),
+                                      Text(
+                                        servicio.toString(),
+                                        style: const TextStyle(
+                                          fontSize: 11,
+                                          color: Color(0xFF00897B),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                );
+                              }).toList(),
+                            ),
+                            if (servicios.length > 4)
+                              Padding(
+                                padding: const EdgeInsets.only(top: 6),
+                                child: Text(
+                                  '+${servicios.length - 4} más',
+                                  style: TextStyle(
+                                    fontSize: 11,
+                                    color: Colors.grey[600],
+                                    fontStyle: FontStyle.italic,
+                                  ),
+                                ),
+                              ),
+                          ],
+                        ),
+                      )
+                    else if (isLoadingHabitacion)
+                      Container(
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color: Colors.grey[100],
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: Center(
+                          child: Text(
+                            'Cargando servicios...',
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: Colors.grey[600],
+                            ),
+                          ),
+                        ),
+                      )
+                    else
+                      Container(
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color: Colors.grey[100],
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: Text(
+                          'Sin servicios disponibles',
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: Colors.grey[600],
+                          ),
                         ),
                       ),
-                      child: Text(
-                        'ID Reserva: ${reserva['id'] ?? 'N/A'}',
-                        style: const TextStyle(
-                          fontSize: 11,
-                          color: Color(0xFF00897B),
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                    ),
 
                     const SizedBox(height: 16),
                     const Divider(),
@@ -543,7 +656,6 @@ class _MisReservasScreenState extends State<MisReservasScreen> {
     );
   }
 
-  // AGREGAR MÉTODO PARA PLACEHOLDER
   Widget _buildPlaceholderImage() {
     return Center(
       child: Column(

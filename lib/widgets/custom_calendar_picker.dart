@@ -147,9 +147,25 @@ class _CustomCalendarPickerState extends State<CustomCalendarPicker> {
     return days;
   }
 
+  /// Calcula el offset del primer día del mes
+  /// El calendario muestra: D(0), L(1), M(2), M(3), J(4), V(5), S(6)
+  /// DateTime.weekday devuelve: Lun(1), Mar(2), Mié(3), Jue(4), Vie(5), Sáb(6), Dom(7)
   int _getFirstDayOffset(DateTime month) {
     final firstDayOfMonth = DateTime(month.year, month.month, 1);
-    return (firstDayOfMonth.weekday % 7); // 0 = Domingo, 6 = Sábado
+    final weekday = firstDayOfMonth.weekday;
+    
+    // Convertir de sistema ISO a sistema con domingo=0
+    // Lunes(1) → índice 1
+    // Martes(2) → índice 2  
+    // Miércoles(3) → índice 3
+    // Jueves(4) → índice 4
+    // Viernes(5) → índice 5
+    // Sábado(6) → índice 6
+    // Domingo(7) → índice 0
+    if (weekday == 7) {
+      return 0; // Domingo va en la primera posición
+    }
+    return weekday; // Los demás días mantienen su número
   }
 
   /// Obtiene el nombre del mes y año en español
@@ -260,48 +276,57 @@ class _CustomCalendarPickerState extends State<CustomCalendarPicker> {
     final daysInMonth = _getDaysInMonth(_currentMonth);
     final firstDayOffset = _getFirstDayOffset(_currentMonth);
 
-    return Wrap(
-      children: [
-        // Espacios vacíos antes del primer día
-        ...List.generate(
-          firstDayOffset,
-          (index) => const SizedBox(width: 40, height: 40),
-        ),
-        // Días del mes
-        ...daysInMonth.map((day) {
-          final isSelected = _selectedDate != null &&
-              day.year == _selectedDate!.year &&
-              day.month == _selectedDate!.month &&
-              day.day == _selectedDate!.day;
+    // Crear lista completa con espacios vacíos y días
+    final List<Widget> calendarCells = [];
+    
+    // Agregar espacios vacíos antes del primer día
+    for (int i = 0; i < firstDayOffset; i++) {
+      calendarCells.add(const SizedBox(width: 40, height: 40));
+    }
+    
+    // Agregar los días del mes
+    for (final day in daysInMonth) {
+      final isSelected = _selectedDate != null &&
+          day.year == _selectedDate!.year &&
+          day.month == _selectedDate!.month &&
+          day.day == _selectedDate!.day;
 
-          return GestureDetector(
-            onTap: () => _onDayTapped(day),
-            child: Container(
-              width: 40,
-              height: 40,
-              margin: const EdgeInsets.all(2),
-              decoration: BoxDecoration(
-                color: isSelected
-                    ? const Color(0xFF00897B)
-                    : _getDayBackgroundColor(day),
-                borderRadius: BorderRadius.circular(8),
-                border: isSelected
-                    ? Border.all(color: const Color(0xFF00897B), width: 2)
-                    : null,
-              ),
-              child: Center(
-                child: Text(
-                  '${day.day}',
-                  style: TextStyle(
-                    color: isSelected ? Colors.white : _getDayTextColor(day),
-                    fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-                  ),
+      calendarCells.add(
+        GestureDetector(
+          onTap: () => _onDayTapped(day),
+          child: Container(
+            width: 40,
+            height: 40,
+            margin: const EdgeInsets.all(2),
+            decoration: BoxDecoration(
+              color: isSelected
+                  ? const Color(0xFF00897B)
+                  : _getDayBackgroundColor(day),
+              borderRadius: BorderRadius.circular(8),
+              border: isSelected
+                  ? Border.all(color: const Color(0xFF00897B), width: 2)
+                  : null,
+            ),
+            child: Center(
+              child: Text(
+                '${day.day}',
+                style: TextStyle(
+                  color: isSelected ? Colors.white : _getDayTextColor(day),
+                  fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
                 ),
               ),
             ),
-          );
-        }),
-      ],
+          ),
+        ),
+      );
+    }
+
+    // Usar GridView con 7 columnas fijas
+    return GridView.count(
+      crossAxisCount: 7, // 7 días de la semana
+      shrinkWrap: true,
+      physics: const NeverScrollableScrollPhysics(),
+      children: calendarCells,
     );
   }
 
